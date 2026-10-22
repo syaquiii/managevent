@@ -52,8 +52,6 @@ Dokumentasi lengkap untuk pengembangan proyek dapat diakses di direktori `/docs`
 2. Buka proyek di **Android Studio Ladybug** (atau versi terbaru).
 3. Buka file `local.properties` di root folder, lalu tambahkan credentials Supabase:
    ```properties
-   SUPABASE_URL=https://eogkrlvobpbqcloiozuj.supabase.co
-   SUPABASE_KEY=sb_publishable_jJSLuqMfueuQitDcIrr2Sw_Gh3XGbt_
-   ```
+   minta syauqi
 4. Lakukan **Gradle Sync**.
 5. Jalankan aplikasi di emulator atau perangkat fisik (min SDK 26).
