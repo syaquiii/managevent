@@ -75,9 +75,14 @@ Setiap mahasiswa bertanggung jawab penuh atas sub-folder di `com.managevent.app.
    - Pastikan Android Studio Anda sudah terkonfigurasi dengan JDK 11 atau JDK 17.
    - Lakukan Gradle Sync (`Sync Project with Gradle Files`).
 
-2. **Konfigurasi Supabase Client**:
-   - Buka file `com/managevent/app/core/network/SupabaseClient.kt`.
-   - Masukkan `SUPABASE_URL` dan `SUPABASE_KEY` dari dashboard Supabase Anda.
+2. **Konfigurasi Supabase Environment Variables**:
+   - Buka file `local.properties` di root proyek.
+   - Tambahkan baris berikut (sesuaikan dengan credentials Supabase Anda):
+     ```properties
+     SUPABASE_URL=https://eogkrlvobpbqcloiozuj.supabase.co
+     SUPABASE_KEY=sb_publishable_jJSLuqMfueuQitDcIrr2Sw_Gh3XGbt_
+     ```
+   - Gradle akan membaca variabel ini secara aman melalui `BuildConfig.SUPABASE_URL` dan `BuildConfig.SUPABASE_KEY` tanpa mengekspos kunci di repositori Git.
 
 3. **Menjalankan Aplikasi**:
    - Pilih emulator/perangkat fisik Android dengan minimum SDK 26 (Android 8.0).
