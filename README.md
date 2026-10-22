@@ -47,7 +47,7 @@ Dokumentasi lengkap untuk pengembangan proyek dapat diakses di direktori `/docs`
 
 1. Clone repositori ini:
    ```bash
-   git clone https://github.com/USERNAME/managevent.git
+   git clone https://github.com/syaquiii/managevent.git
    ```
 2. Buka proyek di **Android Studio Ladybug** (atau versi terbaru).
 3. Buka file `local.properties` di root folder, lalu tambahkan credentials Supabase:
