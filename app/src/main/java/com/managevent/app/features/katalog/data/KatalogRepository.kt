@@ -3,6 +3,7 @@ package com.managevent.app.features.katalog.data
 import com.managevent.app.core.network.SupabaseClientProvider
 import com.managevent.app.core.util.UiState
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -33,6 +34,20 @@ class KatalogRepository {
         }
     }
 
+    suspend fun uploadPoster(fileName: String, byteArray: ByteArray): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val bucket = client.storage["posters"]
+                bucket.upload(path = fileName, data = byteArray) {
+                    upsert = true
+                }
+                bucket.publicUrl(fileName)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
     suspend fun addEvent(event: EventModel): UiState<String> {
         return withContext(Dispatchers.IO) {
             try {
@@ -40,6 +55,32 @@ class KatalogRepository {
                 UiState.Success("Event berhasil ditambahkan")
             } catch (e: Exception) {
                 UiState.Error(e.localizedMessage ?: "Gagal menambahkan event")
+            }
+        }
+    }
+
+    suspend fun updateEvent(id: String, event: EventModel): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["events"].update(event) {
+                    filter { eq("id", id) }
+                }
+                UiState.Success("Event berhasil diperbarui")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal memperbarui event")
+            }
+        }
+    }
+
+    suspend fun deleteEvent(id: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["events"].delete {
+                    filter { eq("id", id) }
+                }
+                UiState.Success("Event berhasil dihapus")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal menghapus event")
             }
         }
     }

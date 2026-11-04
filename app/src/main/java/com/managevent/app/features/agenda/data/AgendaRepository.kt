@@ -29,9 +29,35 @@ class AgendaRepository {
         return withContext(Dispatchers.IO) {
             try {
                 client.postgrest["agenda"].insert(agenda)
-                UiState.Success("Agenda berhasil ditambahkan")
+                UiState.Success("Catatan agenda berhasil ditambahkan")
             } catch (e: Exception) {
                 UiState.Error(e.localizedMessage ?: "Gagal menambahkan agenda")
+            }
+        }
+    }
+
+    suspend fun updateAgenda(agendaId: String, agenda: AgendaModel): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["agenda"].update(agenda) {
+                    filter { eq("id", agendaId) }
+                }
+                UiState.Success("Catatan agenda berhasil diperbarui")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal memperbarui agenda")
+            }
+        }
+    }
+
+    suspend fun deleteAgenda(agendaId: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["agenda"].delete {
+                    filter { eq("id", agendaId) }
+                }
+                UiState.Success("Catatan agenda berhasil dihapus")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal menghapus agenda")
             }
         }
     }

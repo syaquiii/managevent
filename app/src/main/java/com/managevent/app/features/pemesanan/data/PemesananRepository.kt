@@ -32,4 +32,32 @@ class PemesananRepository {
             }
         }
     }
+
+    suspend fun updateStatusPemesanan(transaksiId: String, status: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["transaksi"].update({
+                    set("status", status)
+                }) {
+                    filter { eq("id", transaksiId) }
+                }
+                UiState.Success("Status pemesanan berhasil diperbarui")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal memperbarui status")
+            }
+        }
+    }
+
+    suspend fun batalkanPemesanan(transaksiId: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["transaksi"].delete {
+                    filter { eq("id", transaksiId) }
+                }
+                UiState.Success("Pemesanan berhasil dibatalkan")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal membatalkan pemesanan")
+            }
+        }
+    }
 }

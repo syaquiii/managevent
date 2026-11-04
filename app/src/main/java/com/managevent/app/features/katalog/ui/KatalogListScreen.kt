@@ -1,13 +1,18 @@
 package com.managevent.app.features.katalog.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -30,6 +35,7 @@ import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
 fun KatalogListScreen(
     modifier: Modifier = Modifier,
     viewModel: KatalogViewModel = viewModel(),
+    userRole: String = "PEMESAN", // "VENDOR" atau "PEMESAN"
     onEventClick: (String) -> Unit = {},
     onAddEventClick: () -> Unit = {}
 ) {
@@ -37,6 +43,7 @@ fun KatalogListScreen(
 
     KatalogListContent(
         eventsState = eventsState,
+        userRole = userRole,
         onEventClick = onEventClick,
         onAddEventClick = onAddEventClick,
         modifier = modifier
@@ -46,6 +53,7 @@ fun KatalogListScreen(
 @Composable
 fun KatalogListContent(
     eventsState: UiState<List<EventModel>>,
+    userRole: String,
     onEventClick: (String) -> Unit,
     onAddEventClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -54,8 +62,11 @@ fun KatalogListContent(
         modifier = modifier,
         topBar = { AppTopBar(title = "Katalog Event") },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddEventClick) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Tambah Event")
+            // FAB Khusus Vendor sesuai RBAC
+            if (userRole == "VENDOR") {
+                FloatingActionButton(onClick = onAddEventClick) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Tambah Event")
+                }
             }
         }
     ) { innerPadding ->
@@ -65,14 +76,35 @@ fun KatalogListContent(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            Text(text = "Daftar Katalog Event")
-            LazyColumn {
+            Text(
+                text = "Daftar Paket & Event",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            // Tampilan Grid: LazyVerticalGrid
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 items(
-                    items = listOf("1", "2", "3", "4", "5"),
-                    key = { it }
-                ) { index ->
-                    Box(modifier = Modifier.padding(vertical = 8.dp)) {
-                        Text(text = "Event Item #$index")
+                    items = listOf(
+                        EventModel("1", "Pernikahan Mewah", "Paket pernikahan indoor"),
+                        EventModel("2", "Seminar Nasional", "Seminar & Workshop IT"),
+                        EventModel("3", "Konser Musik", "Festival musik outdoor")
+                    ),
+                    key = { it.id }
+                ) { event ->
+                    Card(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth()
+                            .clickable { onEventClick(event.id) }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(text = event.title, style = MaterialTheme.typography.titleMedium)
+                            Text(text = event.description, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }
@@ -86,8 +118,9 @@ fun KatalogListContentPreview() {
     ManageventTheme {
         KatalogListContent(
             eventsState = UiState.Success(
-                listOf(EventModel(id = "1", title = "Konser Musik"))
+                listOf(EventModel(id = "1", title = "Pernikahan Mewah"))
             ),
+            userRole = "VENDOR",
             onEventClick = {},
             onAddEventClick = {}
         )

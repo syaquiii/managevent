@@ -32,4 +32,33 @@ class UlasanRepository {
             }
         }
     }
+
+    suspend fun updateUlasan(ulasanId: String, comment: String, rating: Int): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["ulasan"].update({
+                    set("comment", comment)
+                    set("rating", rating)
+                }) {
+                    filter { eq("id", ulasanId) }
+                }
+                UiState.Success("Ulasan berhasil diperbarui")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal memperbarui ulasan")
+            }
+        }
+    }
+
+    suspend fun deleteUlasan(ulasanId: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["ulasan"].delete {
+                    filter { eq("id", ulasanId) }
+                }
+                UiState.Success("Ulasan berhasil dihapus")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal menghapus ulasan")
+            }
+        }
+    }
 }

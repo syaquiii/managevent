@@ -32,4 +32,17 @@ class WishlistRepository {
             }
         }
     }
+
+    suspend fun removeFromWishlist(wishlistId: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["wishlist"].delete {
+                    filter { eq("id", wishlistId) }
+                }
+                UiState.Success("Dihapus dari wishlist")
+            } catch (e: Exception) {
+                UiState.Error(e.localizedMessage ?: "Gagal menghapus dari wishlist")
+            }
+        }
+    }
 }

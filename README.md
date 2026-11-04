@@ -5,41 +5,34 @@
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 
-**Managevent** adalah aplikasi Android berbasis **Kotlin** dan **Jetpack Compose** untuk pengelolaan, pemesanan, ulasan, wishlist, dan agenda event yang terintegrasi dengan backend **Supabase**.
+**Managevent** adalah platform manajemen event mobile berbasis **Kotlin**, **Jetpack Compose**, dan **Supabase**. Pengguna dapat mencari event, memesan paket, memberi ulasan, menyimpan favorit, dan mencatat persiapan event.
 
 ---
 
-## 📱 Arsitektur Aplikasi
+## 🔐 Peran Pengguna (RBAC)
 
-Aplikasi dibangun menggunakan pola **MVVM (Model-View-ViewModel)** dengan struktur folder modular berbasis fitur (*feature-based*):
-
-```text
-com.managevent.app
-├── core/           # Konfigurasi bersama (SupabaseClient, NavGraph, Theme, Reusable UI)
-├── auth/           # Modul Autentikasi (Login, Register, Profile)
-└── features/       # Modul Fitur Utama Anggota (Katalog, Pemesanan, Ulasan, Wishlist, Agenda)
-```
+- **Vendor**: Menambah, mengubah, dan menghapus event/paket (+ upload poster).
+- **Pemesan**: Melihat event, memesan paket, memberi ulasan, menyimpan wishlist, dan mencatat persiapan event.
 
 ---
 
-## 👥 Tim & Pembagian Modul
+## 👥 Tim & Pembagian Modul Fitur
 
-| No | Modul / Fitur | Mahasiswa Penanggung Jawab | Lokasi Modul |
-|---|---|---|---|
-| 1 | **Katalog Event** | Muhammad Abdul Fatah | `features/katalog/` |
-| 2 | **Pemesanan Tiket** | Muhammad Darren Achilles Setiawan | `features/pemesanan/` |
-| 3 | **Ulasan & Rating** | Rayhan Wira Pamungkas | `features/ulasan/` |
-| 4 | **Wishlist Event** | Muhammad Syauqi Imaduddin | `features/wishlist/` |
-| 5 | **Agenda Event** | Farrel Radya Putra | `features/agenda/` |
+| No | Modul / Fitur | Mahasiswa Penanggung Jawab | Tampilan List | Operations |
+|---|---|---|---|---|
+| 1 | **Katalog Event & Paket** | Muhammad Abdul Fatah | `LazyVerticalGrid` | Read, Insert (+ Storage), Update, Delete |
+| 2 | **Pemesanan & Riwayat Transaksi** | Muhammad Darren Achilles Setiawan | `HorizontalPager` + `LazyColumn` | Read, Insert, Update, Delete |
+| 3 | **Ulasan & Rating** | Rayhan Wira Pamungkas | `LazyRow` + `LazyColumn` | Read, Insert, Update, Delete |
+| 4 | **Wishlist / Favorit** | Muhammad Syauqi Imaduddin | `LazyVerticalGrid` | Read, Insert, Delete |
+| 5 | **Catatan Persiapan Event** | Farrel Radya Putra | `LazyColumn` | Read, Insert, Update, Delete |
 
 ---
 
-## 📚 Dokumentasi Tim
+## 📚 Dokumentasi Lengkap
 
-Dokumentasi lengkap untuk pengembangan proyek dapat diakses di direktori `/docs`:
-
-- 📘 **[Panduan Pengerjaan & Setup Tim](docs/README.md)** — Alur pengerjaan, setup Supabase, dan strategi Git branching.
-- 📐 **[Coding Guidelines & Standards](docs/CODING_GUIDELINES.md)** — Standar penulisan kode Kotlin, Jetpack Compose, state management (`UiState`), dan konvensi commit Git.
+- 📘 **[Panduan Requirements & Setup Tim](docs/README.md)** — Rincian teknis, RBAC, dan alur Supabase CRUD.
+- 📐 **[Coding Guidelines & Standards](docs/CODING_GUIDELINES.md)** — Standar arsitektur MVVM + UDF, `UiState`, State Hoisting, dan Coroutines.
+- 🗄️ **[Supabase Schema SQL](docs/supabase_schema.sql)** — Script pembuat tabel & kebijakan RLS untuk Supabase Dashboard.
 
 ---
 
@@ -47,11 +40,12 @@ Dokumentasi lengkap untuk pengembangan proyek dapat diakses di direktori `/docs`
 
 1. Clone repositori ini:
    ```bash
-   git clone https://github.com/syaquiii/managevent.git
+   git clone https://github.com/USERNAME/managevent.git
    ```
-2. Buka proyek di **Android Studio Ladybug** (atau versi terbaru).
+2. Buka proyek di **Android Studio**.
 3. Buka file `local.properties` di root folder, lalu tambahkan credentials Supabase:
    ```properties
-   minta syauqi
-4. Lakukan **Gradle Sync**.
-5. Jalankan aplikasi di emulator atau perangkat fisik (min SDK 26).
+   SUPABASE_URL=https://eogkrlvobpbqcloiozuj.supabase.co
+   SUPABASE_KEY=sb_publishable_jJSLuqMfueuQitDcIrr2Sw_Gh3XGbt_
+   ```
+4. Lakukan **Gradle Sync** & **Run 'app'**.

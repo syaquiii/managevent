@@ -4,8 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class UserModel(
-    val id: String,
-    val email: String,
+    val id: String = "",
+    val email: String = "",
     val fullName: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val role: String = "PEMESAN" // "VENDOR" atau "PEMESAN"
 )
