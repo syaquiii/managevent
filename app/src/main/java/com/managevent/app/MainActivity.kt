@@ -46,6 +46,9 @@ class MainActivity : ComponentActivity() {
                                 Button(onClick = { navController.navigate(Screen.KatalogList.route) }) {
                                     Text("Katalog")
                                 }
+                                Button(onClick = { navController.navigate(Screen.UlasanList.route) }) {
+                                    Text("Ulasan")
+                                }
                                 Button(onClick = { navController.navigate(Screen.Wishlist.route) }) {
                                     Text("Wishlist")
                                 }

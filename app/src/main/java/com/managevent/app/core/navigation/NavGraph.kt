@@ -73,7 +73,12 @@ fun AppNavHost(
 
         // Feature 3: Ulasan (Rayhan Wira Pamungkas)
         composable(Screen.UlasanList.route) {
-            UlasanListScreen()
+            UlasanListScreen(
+                eventId = "dummy-event-id",
+                onAddUlasanClick = {
+                    navController.navigate(Screen.UlasanForm.createRoute("dummy-event-id"))
+                }
+            )
         }
         composable(Screen.UlasanForm.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""

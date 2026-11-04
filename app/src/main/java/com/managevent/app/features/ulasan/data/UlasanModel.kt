@@ -1,14 +1,15 @@
 package com.managevent.app.features.ulasan.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class UlasanModel(
     val id: String = "",
-    val eventId: String = "",
-    val userId: String = "",
+    @SerialName("event_id") val eventId: String = "",
+    @SerialName("user_id") val userId: String = "",
     val username: String = "",
     val rating: Int = 5,
     val comment: String = "",
-    val createdAt: String = ""
+    @SerialName("created_at") val createdAt: String = ""
 )
