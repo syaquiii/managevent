@@ -1,5 +1,6 @@
 package com.managevent.app.features.katalog.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,5 +12,7 @@ data class EventModel(
     val date: String = "",
     val location: String = "",
     val price: Double = 0.0,
-    val imageUrl: String? = null
+    @SerialName("image_url")
+    val imageUrl: String? = null,
+    val isFavorite: Boolean = false
 )
