@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.ulasan.data.UlasanModel
 import com.managevent.app.features.ulasan.data.UlasanRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,13 @@ class UlasanViewModel(
     fun fetchUlasan(eventId: String) {
         viewModelScope.launch {
             _ulasanState.value = UiState.Loading
-            _ulasanState.value = repository.getUlasanByEvent(eventId)
+            try {
+                _ulasanState.value = repository.getUlasanByEvent(eventId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _ulasanState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+            }
         }
     }
 }

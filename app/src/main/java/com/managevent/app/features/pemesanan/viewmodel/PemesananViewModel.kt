@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.pemesanan.data.PemesananRepository
 import com.managevent.app.features.pemesanan.data.TransaksiModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,13 @@ class PemesananViewModel(
     fun fetchRiwayat(userId: String) {
         viewModelScope.launch {
             _riwayatState.value = UiState.Loading
-            _riwayatState.value = repository.getRiwayatPemesanan(userId)
+            try {
+                _riwayatState.value = repository.getRiwayatPemesanan(userId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _riwayatState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+            }
         }
     }
 }

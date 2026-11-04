@@ -16,19 +16,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 import com.managevent.app.core.components.AppButton
+import com.managevent.app.core.theme.ManageventTheme
 
 @Composable
 fun LoginScreen(
+    modifier: Modifier = Modifier,
     onNavigateToRegister: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    LoginContent(
+        email = email,
+        onEmailChange = { email = it },
+        password = password,
+        onPasswordChange = { password = it },
+        onLoginClick = { /* TODO: Login */ },
+        onNavigateToRegister = onNavigateToRegister,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun LoginContent(
+    email: String,
+    onEmailChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
+    onNavigateToRegister: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -39,7 +63,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = onEmailChange,
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -47,7 +71,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = onPasswordChange,
             label = { Text("Password") },
             modifier = Modifier.fillMaxWidth()
         )
@@ -55,12 +79,27 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
         AppButton(
             text = "Login",
-            onClick = { /* TODO: Trigger AuthViewModel login */ }
+            onClick = onLoginClick
         )
 
         Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = onNavigateToRegister) {
             Text("Belum punya akun? Daftar disini")
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LoginContentPreview() {
+    ManageventTheme {
+        LoginContent(
+            email = "user@example.com",
+            onEmailChange = {},
+            password = "password123",
+            onPasswordChange = {},
+            onLoginClick = {},
+            onNavigateToRegister = {}
+        )
     }
 }

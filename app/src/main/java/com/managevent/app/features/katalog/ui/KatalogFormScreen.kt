@@ -15,17 +15,41 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppTopBar
+import com.managevent.app.core.theme.ManageventTheme
 
 @Composable
-fun KatalogFormScreen() {
+fun KatalogFormScreen(
+    modifier: Modifier = Modifier
+) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
+    KatalogFormContent(
+        title = title,
+        onTitleChange = { title = it },
+        description = description,
+        onDescriptionChange = { description = it },
+        onSubmit = { /* TODO: Submit form */ },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun KatalogFormContent(
+    title: String,
+    onTitleChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
+        modifier = modifier,
         topBar = { AppTopBar(title = "Form Event") }
     ) { innerPadding ->
         Column(
@@ -36,22 +60,36 @@ fun KatalogFormScreen() {
         ) {
             OutlinedTextField(
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = onTitleChange,
                 label = { Text("Judul Event") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = description,
-                onValueChange = { description = it },
+                onValueChange = onDescriptionChange,
                 label = { Text("Deskripsi Event") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(24.dp))
             AppButton(
                 text = "Simpan Event",
-                onClick = { /* TODO: Simpan event */ }
+                onClick = onSubmit
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun KatalogFormContentPreview() {
+    ManageventTheme {
+        KatalogFormContent(
+            title = "Konser Musik",
+            onTitleChange = {},
+            description = "Deskripsi acara",
+            onDescriptionChange = {},
+            onSubmit = {}
+        )
     }
 }

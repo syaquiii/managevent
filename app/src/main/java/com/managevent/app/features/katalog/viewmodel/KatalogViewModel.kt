@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.katalog.data.EventModel
 import com.managevent.app.features.katalog.data.KatalogRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,13 @@ class KatalogViewModel(
     fun fetchEvents() {
         viewModelScope.launch {
             _eventsState.value = UiState.Loading
-            _eventsState.value = repository.getEvents()
+            try {
+                _eventsState.value = repository.getEvents()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _eventsState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+            }
         }
     }
 }
