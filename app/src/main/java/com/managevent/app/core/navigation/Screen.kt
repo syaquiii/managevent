@@ -21,7 +21,9 @@ sealed class Screen(val route: String) {
     }
 
     // Feature 3: Ulasan (Rayhan Wira Pamungkas)
-    data object UlasanList : Screen("ulasan_list")
+    data object UlasanList : Screen("ulasan_list/{eventId}") {
+        fun createRoute(eventId: String) = "ulasan_list/$eventId"
+    }
     data object UlasanForm : Screen("ulasan_form/{eventId}") {
         fun createRoute(eventId: String) = "ulasan_form/$eventId"
     }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -40,7 +39,7 @@ val BackgroundColor = Color(0xFFFCF8FF)
 
 @Composable
 fun UlasanListScreen(
-    eventId: String = "MASUKKAN_UUID_ASLI_DISINI", // Ganti dengan UUID asli
+    eventId: String = "MASUKKAN_UUID_ASLI_DISINI",
     onAddUlasanClick: () -> Unit = {},
     viewModel: UlasanViewModel = viewModel()
 ) {
@@ -72,7 +71,6 @@ fun UlasanListContent(
         modifier = modifier,
         topBar = { AppTopBar(title = "Ulasan List") },
         bottomBar = {
-            // Tombol Tulis Ulasan di bawah
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,12 +98,10 @@ fun UlasanListContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. HERO CARD (Skor Rata-rata)
             item {
                 HeroRatingCard()
             }
 
-            // 2. FILTER CHIPS
             item {
                 Text("Filter Rating:", fontWeight = FontWeight.Bold, color = Color(0xFF181445))
                 LazyRow(
@@ -133,7 +129,6 @@ fun UlasanListContent(
                 }
             }
 
-            // 3. LIST ULASAN
             when (uiState) {
                 is UiState.Loading -> {
                     item {
@@ -163,7 +158,6 @@ fun UlasanListContent(
                 else -> {}
             }
 
-            // Spacer tambahan biar ga ketutup tombol bawah
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
@@ -200,7 +194,6 @@ fun HeroRatingCard() {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // Progress Bars (Dummy data untuk visual)
             RatingProgressBar(star = 5, count = 96, percentage = 0.78f)
             RatingProgressBar(star = 4, count = 18, percentage = 0.15f)
             RatingProgressBar(star = 3, count = 6, percentage = 0.05f)
@@ -245,10 +238,8 @@ fun UlasanItemCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header (Foto, Nama, Tanggal)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Foto dummy
                     Box(modifier = Modifier.size(40.dp).background(LilacActiveColor, CircleShape))
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
@@ -256,7 +247,6 @@ fun UlasanItemCard(
                         Text("18 Juli 2026", color = GrayTextColor, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                // Tombol Hapus (Sementara taruh sini)
                 IconButton(onClick = { onDeleteClick(ulasan.id) }) {
                     Icon(Icons.Default.Delete, "Hapus", tint = Color.Gray)
                 }
@@ -264,7 +254,6 @@ fun UlasanItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Bintang
             Row {
                 repeat(5) { i ->
                     Icon(Icons.Default.Star, contentDescription = null, tint = if (i < ulasan.rating) CoralColor else Color.LightGray, modifier = Modifier.size(16.dp))
@@ -273,7 +262,6 @@ fun UlasanItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Teks Ulasan
             Text(ulasan.comment, color = Color(0xFF181445), style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -285,8 +273,8 @@ fun UlasanListContentPreview() {
     ManageventTheme {
         UlasanListContent(
             uiState = UiState.Success(listOf(
-                UlasanModel(username = "Sarah Wijaya", rating = 5, comment = "Pengalaman pertama kali hadir di festival musik ini dan luar biasa rapi. Manajemen antrean toilet dan tempat ibadah dipersiapkan dengan baik."),
-                UlasanModel(username = "Budi Pratama", rating = 4, comment = "Bintang tamu dan visual panggung spektakuler! Sedikit masukan untuk pendingin udara di area VIP lounge.")
+                UlasanModel(id = "1", username = "Sarah Wijaya", rating = 5, comment = "Pengalaman pertama kali hadir di festival musik ini dan luar biasa rapi. Manajemen antrean toilet dan tempat ibadah dipersiapkan dengan baik."),
+                UlasanModel(id = "2", username = "Budi Pratama", rating = 4, comment = "Bintang tamu dan visual panggung spektakuler! Sedikit masukan untuk pendingin udara di area VIP lounge.")
             )),
             selectedFilter = 0,
             onFilterClick = {},

@@ -25,18 +25,48 @@ fun UlasanFormScreen(
     userId: String = "dummy-user-id",
     username: String = "User Uji",
     onSuccessNavigateBack: () -> Unit = {},
-    viewModel: UlasanViewModel = viewModel()
+    viewModel: UlasanViewModel = viewModel(),
+    modifier: Modifier = Modifier
+) {
+    UlasanFormContent(
+        eventId = eventId,
+        ratingInput = viewModel.ratingInput,
+        onRatingChange = viewModel::onRatingChange,
+        commentInput = viewModel.commentInput,
+        onCommentChange = viewModel::onCommentChange,
+        onSubmit = {
+            viewModel.submitUlasan(
+                eventId = eventId,
+                userId = userId,
+                username = username,
+                onSuccess = onSuccessNavigateBack
+            )
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun UlasanFormContent(
+    eventId: String,
+    ratingInput: Int,
+    onRatingChange: (Int) -> Unit,
+    commentInput: String,
+    onCommentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = { AppTopBar(title = "Beri Ulasan") },
-        containerColor = BackgroundColor // Panggil warna dari UlasanListScreen
+        containerColor = BackgroundColor
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()) // <--- INI YANG DITAMBAHKAN
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 text = "Beri Ulasan untuk Event ID: $eventId",
@@ -45,7 +75,6 @@ fun UlasanFormScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Input Bintang
             Text(
                 text = "Seberapa puas kamu?",
                 style = MaterialTheme.typography.bodyLarge,
@@ -57,20 +86,19 @@ fun UlasanFormScreen(
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Bintang $starValue",
-                        tint = if (starValue <= viewModel.ratingInput) CoralColor else Color.LightGray,
+                        tint = if (starValue <= ratingInput) CoralColor else Color.LightGray,
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable { viewModel.onRatingChange(starValue) }
+                            .clickable { onRatingChange(starValue) }
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Input Komentar
             OutlinedTextField(
-                value = viewModel.commentInput,
-                onValueChange = { viewModel.onCommentChange(it) },
+                value = commentInput,
+                onValueChange = onCommentChange,
                 label = { Text("Tuliskan pengalamanmu...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
@@ -85,16 +113,8 @@ fun UlasanFormScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Tombol Kirim
             Button(
-                onClick = {
-                    viewModel.submitUlasan(
-                        eventId = eventId,
-                        userId = userId,
-                        username = username,
-                        onSuccess = { onSuccessNavigateBack() }
-                    )
-                },
+                onClick = onSubmit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -116,6 +136,13 @@ fun UlasanFormScreen(
 @Composable
 fun UlasanFormScreenPreview() {
     ManageventTheme {
-        UlasanFormScreen()
+        UlasanFormContent(
+            eventId = "EVT-101",
+            ratingInput = 5,
+            onRatingChange = {},
+            commentInput = "Acaranya sangat bagus dan tertata rapi!",
+            onCommentChange = {},
+            onSubmit = {}
+        )
     }
 }

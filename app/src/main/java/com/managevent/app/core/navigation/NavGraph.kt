@@ -56,7 +56,8 @@ fun AppNavHost(
             KatalogDetailScreen(
                 eventId = eventId,
                 onBackClick = { navController.popBackStack() },
-                onBookClick = { _ -> navController.navigate(Screen.Checkout.route) }
+                onBookClick = { _ -> navController.navigate(Screen.Checkout.route) },
+                onReviewClick = { id -> navController.navigate(Screen.UlasanList.createRoute(id)) }
             )
         }
         composable(Screen.KatalogForm.route) {
@@ -79,17 +80,21 @@ fun AppNavHost(
         }
 
         // Feature 3: Ulasan (Rayhan Wira Pamungkas)
-        composable(Screen.UlasanList.route) {
+        composable(Screen.UlasanList.route) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: "dummy-event-id"
             UlasanListScreen(
-                eventId = "dummy-event-id",
+                eventId = eventId,
                 onAddUlasanClick = {
-                    navController.navigate(Screen.UlasanForm.createRoute("dummy-event-id"))
+                    navController.navigate(Screen.UlasanForm.createRoute(eventId))
                 }
             )
         }
         composable(Screen.UlasanForm.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            UlasanFormScreen(eventId = eventId)
+            UlasanFormScreen(
+                eventId = eventId,
+                onSuccessNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // Feature 4: Wishlist (Muhammad Syauqi Imaduddin)

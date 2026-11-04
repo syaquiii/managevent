@@ -1,6 +1,7 @@
 package com.managevent.app.features.katalog.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,15 +12,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Button
@@ -65,7 +69,8 @@ fun KatalogDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: KatalogViewModel = viewModel(),
     onBackClick: () -> Unit = {},
-    onBookClick: (String) -> Unit = {}
+    onBookClick: (String) -> Unit = {},
+    onReviewClick: (String) -> Unit = {}
 ) {
     val detailState by viewModel.eventDetailState.collectAsStateWithLifecycle()
 
@@ -83,6 +88,7 @@ fun KatalogDetailScreen(
             viewModel.fetchEventById(eventId)
         },
         onBookClick = onBookClick,
+        onReviewClick = onReviewClick,
         modifier = modifier
     )
 }
@@ -94,6 +100,7 @@ fun KatalogDetailContent(
     onBackClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
     onBookClick: (String) -> Unit,
+    onReviewClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -103,7 +110,7 @@ fun KatalogDetailContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Detail Event & Paket",
+                        text = "Detail Vendor / Event",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -142,31 +149,36 @@ fun KatalogDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(
-                                text = "Harga Mulai",
-                                style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF757575))
-                            )
-                            Text(
-                                text = formattedPrice,
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFE55335),
-                                    fontSize = 18.sp
-                                )
+                        // Wishlist Heart Icon Button
+                        IconButton(
+                            onClick = onFavoriteToggle,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFF3F4F8))
+                        ) {
+                            Icon(
+                                imageVector = if (event.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorit",
+                                tint = if (event.isFavorite) Color(0xFFFF385C) else Color(0xFF616161)
                             )
                         }
 
+                        Spacer(modifier = Modifier.width(12.dp))
+
                         Button(
                             onClick = { onBookClick(event.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFC6955)),
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.height(48.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
                         ) {
                             Text(
-                                text = "Pesan Tiket Sekarang",
+                                text = "Pesan Sekarang ->",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                                fontSize = 15.sp,
+                                color = Color.White
                             )
                         }
                     }
@@ -215,23 +227,22 @@ fun KatalogDetailContent(
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            // Heart Wishlist Toggle Button
+                            // Status Pill
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(16.dp)
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                IconButton(onClick = onFavoriteToggle) {
-                                    Icon(
-                                        imageVector = if (event.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = "Favorit",
-                                        tint = if (event.isFavorite) Color(0xFFFF385C) else Color(0xFF616161)
+                                Text(
+                                    text = "🔴 Pendaftaran Dibuka",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF2E7D32)
                                     )
-                                }
+                                )
                             }
 
                             // Category Pill Overlay
@@ -241,14 +252,14 @@ fun KatalogDetailContent(
                                         .align(Alignment.BottomStart)
                                         .padding(16.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF3F51B5))
+                                        .background(Color(0xFFE2DFFF))
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text(
                                         text = event.category,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White,
+                                            color = Color(0xFF3525CD),
                                             fontSize = 12.sp
                                         )
                                     )
@@ -256,7 +267,7 @@ fun KatalogDetailContent(
                             }
                         }
 
-                        // Event Summary Card
+                        // Event Title & Rating Section
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -267,115 +278,143 @@ fun KatalogDetailContent(
                                 text = event.title,
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1C1B1F)
+                                    color = Color(0xFF181445),
+                                    fontSize = 20.sp
                                 )
                             )
 
+                            // Rating Row -> Clickable to navigate to UlasanListScreen!
                             Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onReviewClick(event.id) }
+                                    .padding(vertical = 4.dp, horizontal = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.CalendarToday,
-                                    contentDescription = "Tanggal",
-                                    tint = Color(0xFF3F51B5),
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Rating",
+                                    tint = Color(0xFFFC6955),
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = event.date,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFF424242),
-                                        fontWeight = FontWeight.Medium
+                                    text = "4.8",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF3525CD)
                                     )
+                                )
+                                Text(
+                                    text = "(124 Ulasan)",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = Color(0xFF464555)
+                                    )
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Buka Halaman Ulasan",
+                                    tint = Color(0xFF3525CD),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            // Event Info Card (Date & Location)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0EBFF))
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Place,
-                                    contentDescription = "Lokasi",
-                                    tint = Color(0xFFE55335),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = event.location,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFF424242),
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                )
-                            }
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0xFFE2DFFF)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.CalendarToday,
+                                                contentDescription = "Tanggal",
+                                                tint = Color(0xFF3525CD),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Column {
+                                            Text("Tanggal Pelaksanaan", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF464555)))
+                                            Text(event.date, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
+                                        }
+                                    }
 
-                            Spacer(modifier = Modifier.height(4.dp))
-                            HorizontalDivider(color = Color(0xFFEEEEEE))
-                            Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0xFFE2DFFF)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Place,
+                                                contentDescription = "Lokasi",
+                                                tint = Color(0xFF3525CD),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Column {
+                                            Text("Lokasi Acara", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF464555)))
+                                            Text(event.location, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
+                                        }
+                                    }
+                                }
+                            }
 
                             // Description Section
                             Text(
-                                text = "Deskripsi Event & Paket",
+                                text = "Deskripsi Event",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1C1B1F)
+                                    color = Color(0xFF181445)
                                 )
                             )
 
                             Text(
-                                text = if (event.description.isNotBlank()) event.description else "Nikmati pengalaman acara terbaik yang dikemas secara profesional oleh tim berpengalaman kami.",
+                                text = if (event.description.isNotBlank()) event.description else "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi mulai dari dekorasi, katering, tata rias, busana pengantin, hingga dokumentasi foto dan video profesional.",
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = Color(0xFF616161),
+                                    color = Color(0xFF464555),
                                     lineHeight = 22.sp
                                 )
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Features Card Section
-                            Card(
+                            // Features Badges Section
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4F8))
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF))
                                 ) {
-                                    Text(
-                                        text = "Fasilitas & Layanan Termasuk:",
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1C1B1F)
-                                        )
-                                    )
-
-                                    val facilities = listOf(
-                                        "Tiket Masuk Resmi & E-Voucher",
-                                        "Akses Tempat Duduk / Area Utama",
-                                        "Konsultasi Vendor & Koordinasi Acara",
-                                        "Jaminan Keamanan & Pelayanan 24/7"
-                                    )
-
-                                    facilities.forEach { item ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.CheckCircle,
-                                                contentDescription = "Check",
-                                                tint = Color(0xFF3F51B5),
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Text(
-                                                text = item,
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    color = Color(0xFF424242),
-                                                    fontSize = 13.sp
-                                                )
-                                            )
-                                        }
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF3525CD), modifier = Modifier.size(18.dp))
+                                        Text("200+ Vendor Resmi", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
                                     }
                                 }
                             }
@@ -397,10 +436,10 @@ fun KatalogDetailContentPreview() {
                 EventModel(
                     id = "evt-1",
                     title = "Pameran Pernikahan Nusantara 2026",
-                    description = "Pameran vendor pernikahan terbesar di Nusantara dengan promo eksklusif gaun, catering, dekorasi, dan dokumentasi terlengkap.",
+                    description = "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi.",
                     category = "Pernikahan",
-                    date = "18 Juli 2026",
-                    location = "Jakarta Convention Center",
+                    date = "18 - 20 Juli 2026",
+                    location = "Jakarta Convention Center (JCC), Senayan, Jakarta Pusat",
                     price = 150000.0,
                     imageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800",
                     isFavorite = true
@@ -408,7 +447,8 @@ fun KatalogDetailContentPreview() {
             ),
             onBackClick = {},
             onFavoriteToggle = {},
-            onBookClick = {}
+            onBookClick = {},
+            onReviewClick = {}
         )
     }
 }
