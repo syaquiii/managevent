@@ -34,5 +34,8 @@ sealed class Screen(val route: String) {
 
     // Feature 5: Agenda (Farrel Radya Putra)
     data object AgendaList : Screen("agenda_list")
+    data object AgendaDetailList : Screen("agenda_detail_list/{eventId}") {
+        fun createRoute(eventId: String) = "agenda_detail_list/$eventId"
+    }
     data object AgendaForm : Screen("agenda_form")
 }

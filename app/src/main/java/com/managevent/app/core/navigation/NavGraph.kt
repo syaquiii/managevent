@@ -11,6 +11,7 @@ import com.managevent.app.auth.ui.ProfileScreen
 import com.managevent.app.auth.ui.RegisterScreen
 import com.managevent.app.features.agenda.ui.AgendaFormScreen
 import com.managevent.app.features.agenda.ui.AgendaListScreen
+import com.managevent.app.features.agenda.ui.BookedEventListScreen
 import com.managevent.app.features.katalog.ui.KatalogDetailScreen
 import com.managevent.app.features.katalog.ui.KatalogFormScreen
 import com.managevent.app.features.katalog.ui.KatalogListScreen
@@ -91,10 +92,24 @@ fun AppNavHost(
 
         // Feature 5: Agenda (Farrel Radya Putra)
         composable(Screen.AgendaList.route) {
-            AgendaListScreen()
+            BookedEventListScreen(
+                onOpenNotes = { eventId ->
+                    navController.navigate(Screen.AgendaDetailList.createRoute(eventId))
+                }
+            )
+        }
+        composable(Screen.AgendaDetailList.route) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
+            AgendaListScreen(
+                eventId = eventId,
+                onBack = { navController.popBackStack() },
+                onAddNote = { navController.navigate(Screen.AgendaForm.route) }
+            )
         }
         composable(Screen.AgendaForm.route) {
-            AgendaFormScreen()
+            AgendaFormScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
