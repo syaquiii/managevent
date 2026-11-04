@@ -1,6 +1,27 @@
 # 📱 Documentation - Managevent Android Application
 
-Selamat datang di repositori proyek **Managevent** (Pemrograman Aplikasi Mobile - Proyek Akhir V2). Dokumen ini berisi panduan alur pengerjaan dan rincian persyaratan fitur (*REQUIREMENTS*) untuk seluruh anggota kelompok.
+Selamat datang di repositori proyek **Managevent** (Pemrograman Aplikasi Mobile - Proyek Akhir V2). Dokumen ini berisi panduan alur pengerjaan, spesifikasi Design System, dan rincian persyaratan fitur (*REQUIREMENTS*) untuk seluruh anggota kelompok.
+
+---
+
+## 🎨 Baseline Design System (Material Design 3)
+
+Sistem desain **Managevent** dibangun khusus di atas **Jetpack Compose / Material Design 3**:
+
+- **Primary Color (`#3525CD`)**: Deep Indigo untuk elemen struktural utama, tab aktif, dan branding.
+- **Secondary Container / Coral CTA (`#FC6955`)**: Vibrant Coral khusus tombol konversi utama (Primary Conversion CTA & FAB).
+- **Tertiary (`#005338`)**: Forest Green untuk status sukses transaksi dan tag operasional 'Berjalan'.
+- **Canvas / Background (`#FCF8FF`)**: Base canvas memberikan kehangatan visual yang lembut.
+- **Typography**: Skala Inter terkompresi untuk efisiensi informasi pada perangkat mobile (`headlineLarge` s/d `labelSmall`).
+- **Shape Tokens**:
+  - Cards & FAB: `16.dp`
+  - Input Fields & Buttons: `12.dp`
+  - Chips & Status Tags: Fully Rounded Pill (`CircleShape` / `9999.dp`)
+  - Dialogs & Bottom Sheets: `28.dp`
+- **Reusables Component**:
+  - `AppButton`: Mendukung varian `STANDARD_PRIMARY`, `CONVERSION_CTA`, dan `SECONDARY_OUTLINED`.
+  - `StatusChip`: Penanda status kustom `'Berjalan'` (`#E8F5E9` / `#005338`) dan `'Selesai'` (`#ECEBF0` / `#464555`).
+  - `AppFilterChip`: Chip filter interaktif aktif/inaktif.
 
 ---
 
