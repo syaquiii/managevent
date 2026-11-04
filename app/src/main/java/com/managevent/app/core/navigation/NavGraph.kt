@@ -53,10 +53,17 @@ fun AppNavHost(
         }
         composable(Screen.KatalogDetail.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            KatalogDetailScreen(eventId = eventId)
+            KatalogDetailScreen(
+                eventId = eventId,
+                onBackClick = { navController.popBackStack() },
+                onBookClick = { _ -> navController.navigate(Screen.Checkout.route) }
+            )
         }
         composable(Screen.KatalogForm.route) {
-            KatalogFormScreen()
+            KatalogFormScreen(
+                onBackClick = { navController.popBackStack() },
+                onSuccessSubmit = { navController.popBackStack() }
+            )
         }
 
         // Feature 2: Pemesanan (Muhammad Darren Achilles Setiawan)

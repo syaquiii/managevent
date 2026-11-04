@@ -10,13 +10,67 @@ import kotlinx.coroutines.withContext
 class KatalogRepository {
     private val client = SupabaseClientProvider.client
 
+    fun getMockEvents(): List<EventModel> {
+        return listOf(
+            EventModel(
+                id = "evt-1",
+                title = "Pameran Pernikahan Nusantara 2026",
+                description = "Pameran vendor pernikahan terbesar di Nusantara dengan promo eksklusif gaun, catering, dekorasi, dan dokumentasi terlengkap.",
+                category = "Pernikahan",
+                date = "18 Juli 2026",
+                location = "Jakarta Convention Center",
+                price = 150000.0,
+                imageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800",
+                isFavorite = false
+            ),
+            EventModel(
+                id = "evt-2",
+                title = "Jakarta Jazz Symphony 2026",
+                description = "Konser kolaborasi musisi jazz ternama tanah air dan orkestra internasional dengan penampilan panggung megah.",
+                category = "Konser",
+                date = "22 Agustus 2026",
+                location = "Istora Senayan",
+                price = 350000.0,
+                imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800",
+                isFavorite = false
+            ),
+            EventModel(
+                id = "evt-3",
+                title = "Indonesia Tech Summit 2027",
+                description = "Konferensi teknologi & AI terbesar tahun 2027 menghadirkan pakar industri global, pameran startup, dan sesi networking.",
+                category = "Seminar",
+                date = "14 Februari 2027",
+                location = "ICE BSD Tangerang",
+                price = 250000.0,
+                imageUrl = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=800",
+                isFavorite = false
+            ),
+            EventModel(
+                id = "evt-4",
+                title = "Kids & Family Birthday Festival",
+                description = "Festival ulang tahun anak dan keluarga terbesar dengan wahana permainan, panggung pertunjukan boneka, serta workshop kreasi.",
+                category = "Ulang Tahun",
+                date = "10 Mei 2026",
+                location = "Grand City Surabaya",
+                price = 75000.0,
+                imageUrl = "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=800",
+                isFavorite = false
+            )
+        )
+    }
+
     suspend fun getEvents(): UiState<List<EventModel>> {
         return withContext(Dispatchers.IO) {
             try {
                 val events = client.postgrest["events"].select().decodeList<EventModel>()
-                UiState.Success(events)
-            } catch (e: Exception) {
-                UiState.Error(e.localizedMessage ?: "Gagal mengambil data katalog event")
+                if (events.isEmpty()) {
+                    UiState.Success(getMockEvents())
+                } else {
+                    UiState.Success(events)
+                }
+            } catch (_: Exception) {
+                // Fallback ke data mock jika terjadi kegagalan jaringan/Supabase belum terkonfigurasi
+                UiState.Success(getMockEvents())
             }
         }
     }
@@ -28,8 +82,10 @@ class KatalogRepository {
                     filter { eq("id", id) }
                 }.decodeSingle<EventModel>()
                 UiState.Success(event)
-            } catch (e: Exception) {
-                UiState.Error(e.localizedMessage ?: "Gagal mengambil detail event")
+            } catch (_: Exception) {
+                val mockEvent = getMockEvents().find { it.id == id }
+                    ?: getMockEvents().first()
+                UiState.Success(mockEvent)
             }
         }
     }

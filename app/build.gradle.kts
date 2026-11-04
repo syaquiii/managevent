@@ -65,6 +65,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.serialization.json)
 
+    // Coil Image Loading
+    implementation(libs.coil.compose)
+
     // Supabase & Ktor
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.postgrest)
