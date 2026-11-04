@@ -57,7 +57,7 @@ fun AppNavHost(
             KatalogDetailScreen(
                 eventId = eventId,
                 onBackClick = { navController.popBackStack() },
-                onBookClick = { _ -> navController.navigate(Screen.Checkout.route) },
+                onBookClick = { id -> navController.navigate(Screen.Checkout.createRoute(id)) },
                 onReviewClick = { id -> navController.navigate(Screen.UlasanList.createRoute(id)) }
             )
         }
@@ -69,15 +69,32 @@ fun AppNavHost(
         }
 
         // Feature 2: Pemesanan (Muhammad Darren Achilles Setiawan)
-        composable(Screen.Checkout.route) {
-            CheckoutScreen()
+        composable(Screen.Checkout.route) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId").orEmpty()
+            CheckoutScreen(
+                eventId = eventId,
+                onBackClick = { navController.popBackStack() },
+                onSuccessSubmit = {
+                    navController.navigate(Screen.RiwayatPemesanan.route) {
+                        popUpTo(Screen.KatalogList.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
         composable(Screen.RiwayatPemesanan.route) {
-            RiwayatPemesananScreen()
+            RiwayatPemesananScreen(
+                onTransactionClick = { pemesananId ->
+                    navController.navigate(Screen.DetailPemesanan.createRoute(pemesananId))
+                }
+            )
         }
         composable(Screen.DetailPemesanan.route) { backStackEntry ->
             val pemesananId = backStackEntry.arguments?.getString("pemesananId") ?: ""
-            DetailPemesananScreen(pemesananId = pemesananId)
+            DetailPemesananScreen(
+                pemesananId = pemesananId,
+                onBackClick = { navController.popBackStack() }
+            )
         }
 
         // Feature 3: Ulasan (Rayhan Wira Pamungkas)

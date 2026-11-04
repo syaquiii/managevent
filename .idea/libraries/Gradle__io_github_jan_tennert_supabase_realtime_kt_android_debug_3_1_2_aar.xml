@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: io.github.jan-tennert.supabase:realtime-kt-android-debug:3.1.2@aar" external-system-id="GRADLE">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/9.5.0/transforms/79f68b73e8940833691824ab4d25130a/transformed/realtime-kt-debug/AndroidManifest.xml" />
+      <root url="jar://$USER_HOME$/.gradle/caches/9.5.0/transforms/79f68b73e8940833691824ab4d25130a/transformed/realtime-kt-debug/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.github.jan-tennert.supabase/realtime-kt-android-debug/3.1.2/5f7dfd634014d3a24bfa068823260f7ca2fd2448/realtime-kt-android-debug-3.1.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
