@@ -13,6 +13,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.managevent.app.core.components.AppBottomBar
 import com.managevent.app.core.navigation.AppNavHost
+import com.managevent.app.core.navigation.Screen
 import com.managevent.app.core.theme.ManageventTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,21 +26,29 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
+                // Sembunyikan BottomBar pada layar form input / checkout
+                val showBottomBar = currentRoute != Screen.AgendaForm.route &&
+                        currentRoute != Screen.KatalogForm.route &&
+                        currentRoute != Screen.UlasanForm.route &&
+                        currentRoute != Screen.Checkout.route
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        AppBottomBar(
-                            currentRoute = currentRoute,
-                            onNavigate = { route ->
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
+                        if (showBottomBar) {
+                            AppBottomBar(
+                                currentRoute = currentRoute,
+                                onNavigate = { route ->
+                                    navController.navigate(route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 ) { innerPadding ->
                     AppNavHost(
