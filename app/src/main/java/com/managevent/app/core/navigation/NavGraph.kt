@@ -100,7 +100,11 @@ fun AppNavHost(
 
         // Feature 4: Wishlist (Muhammad Syauqi Imaduddin)
         composable(Screen.Wishlist.route) {
-            WishlistScreen()
+            WishlistScreen(
+                onEventClick = { eventId ->
+                    navController.navigate(Screen.KatalogDetail.createRoute(eventId))
+                }
+            )
         }
         composable(Screen.WishlistDetail.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
