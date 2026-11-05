@@ -6,6 +6,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class AuthRepository {
     private val client = SupabaseClientProvider.client
@@ -34,12 +36,21 @@ class AuthRepository {
         }
     }
 
-    suspend fun register(emailInput: String, passwordInput: String): UiState<String> {
+    suspend fun register(
+        emailInput: String,
+        passwordInput: String,
+        fullName: String = "",
+        role: String = "PEMESAN"
+    ): UiState<String> {
         return withContext(Dispatchers.IO) {
             try {
                 client.auth.signUpWith(Email) {
                     email = emailInput
                     password = passwordInput
+                    data = buildJsonObject {
+                        put("full_name", fullName)
+                        put("role", role)
+                    }
                 }
                 UiState.Success("Registrasi berhasil. Silakan cek email untuk verifikasi.")
             } catch (e: Exception) {

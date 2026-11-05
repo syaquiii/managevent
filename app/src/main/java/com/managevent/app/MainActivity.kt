@@ -27,8 +27,11 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                // Sembunyikan BottomBar pada layar form input / checkout
-                val showBottomBar = currentRoute != Screen.AgendaForm.route &&
+                // Sembunyikan BottomBar pada layar Auth / Onboarding / Form
+                val showBottomBar = currentRoute != Screen.Onboarding.route &&
+                        currentRoute != Screen.Login.route &&
+                        currentRoute != Screen.Register.route &&
+                        currentRoute != Screen.AgendaForm.route &&
                         currentRoute != Screen.KatalogForm.route &&
                         currentRoute != Screen.UlasanForm.route &&
                         currentRoute != Screen.Checkout.route
@@ -54,6 +57,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     AppNavHost(
                         navController = navController,
+                        startDestination = Screen.Onboarding.route,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

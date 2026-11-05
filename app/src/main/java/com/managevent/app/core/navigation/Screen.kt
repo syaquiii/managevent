@@ -2,6 +2,7 @@ package com.managevent.app.core.navigation
 
 sealed class Screen(val route: String) {
     // Auth Routes
+    data object Onboarding : Screen("onboarding")
     data object Login : Screen("login")
     data object Register : Screen("register")
     data object Profile : Screen("profile")
@@ -15,7 +16,7 @@ sealed class Screen(val route: String) {
 
     // Feature 2: Pemesanan (Muhammad Darren Achilles Setiawan)
     data object Checkout : Screen("checkout/{eventId}") {
-        fun createRoute(eventId: String) = "checkout/$eventId"
+        fun createRoute(eventId: String = "") = "checkout/$eventId"
     }
     data object RiwayatPemesanan : Screen("riwayat_pemesanan")
     data object DetailPemesanan : Screen("detail_pemesanan/{pemesananId}") {

@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 import com.managevent.app.auth.ui.LoginScreen
+import com.managevent.app.auth.ui.OnboardingScreen
 import com.managevent.app.auth.ui.ProfileScreen
 import com.managevent.app.auth.ui.RegisterScreen
 import com.managevent.app.features.agenda.ui.AgendaFormScreen
@@ -27,7 +28,7 @@ import com.managevent.app.features.wishlist.ui.WishlistScreen
 fun AppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = Screen.KatalogList.route
+    startDestination: String = Screen.Onboarding.route
 ) {
     NavHost(
         navController = navController,
@@ -35,14 +36,41 @@ fun AppNavHost(
         modifier = modifier
     ) {
         // Auth Routes
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onSkipClick = { navController.navigate(Screen.KatalogList.route) },
+                onLoginClick = { navController.navigate(Screen.Login.route) },
+                onFinishOnboarding = { navController.navigate(Screen.Login.route) }
+            )
+        }
         composable(Screen.Login.route) {
-            LoginScreen(onNavigateToRegister = { navController.navigate(Screen.Register.route) })
+            LoginScreen(
+                onNavigateToRegister = { navController.navigate(Screen.Register.route) },
+                onLoginSuccess = {
+                    navController.navigate(Screen.KatalogList.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(Screen.Register.route) {
-            RegisterScreen(onNavigateToLogin = { navController.popBackStack() })
+            RegisterScreen(
+                onNavigateToLogin = { navController.popBackStack() },
+                onRegisterSuccess = {
+                    navController.navigate(Screen.KatalogList.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(Screen.Profile.route) {
-            ProfileScreen()
+            ProfileScreen(
+                onLogoutClick = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
         // Feature 1: Katalog (Muhammad Abdul Fatah)
