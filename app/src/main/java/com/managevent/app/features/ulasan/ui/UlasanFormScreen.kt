@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -15,50 +16,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.features.ulasan.viewmodel.UlasanViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UlasanFormScreen(
     eventId: String = "dummy-event-id",
     userId: String = "dummy-user-id",
     username: String = "User Uji",
+    onBackClick: () -> Unit, // <--- TAMBAHAN
     onSuccessNavigateBack: () -> Unit = {},
-    viewModel: UlasanViewModel = viewModel(),
-    modifier: Modifier = Modifier
-) {
-    UlasanFormContent(
-        eventId = eventId,
-        ratingInput = viewModel.ratingInput,
-        onRatingChange = viewModel::onRatingChange,
-        commentInput = viewModel.commentInput,
-        onCommentChange = viewModel::onCommentChange,
-        onSubmit = {
-            viewModel.submitUlasan(
-                eventId = eventId,
-                userId = userId,
-                username = username,
-                onSuccess = onSuccessNavigateBack
-            )
-        },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun UlasanFormContent(
-    eventId: String,
-    ratingInput: Int,
-    onRatingChange: (Int) -> Unit,
-    commentInput: String,
-    onCommentChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-    modifier: Modifier = Modifier
+    viewModel: UlasanViewModel = viewModel()
 ) {
     Scaffold(
-        modifier = modifier,
-        topBar = { AppTopBar(title = "Beri Ulasan") },
+        topBar = {
+            TopAppBar(
+                title = { Text("Beri Ulasan", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        },
         containerColor = BackgroundColor
     ) { innerPadding ->
         Column(
@@ -68,28 +50,20 @@ fun UlasanFormContent(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(
-                text = "Beri Ulasan untuk Event ID: $eventId",
-                color = Color(0xFF181445),
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "Beri Ulasan untuk Event ID: $eventId", color = Color(0xFF181445), fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "Seberapa puas kamu?",
-                style = MaterialTheme.typography.bodyLarge,
-                color = GrayTextColor
-            )
+            Text(text = "Seberapa puas kamu?", style = MaterialTheme.typography.bodyLarge, color = GrayTextColor)
             Row(modifier = Modifier.padding(vertical = 8.dp)) {
                 repeat(5) { index ->
                     val starValue = index + 1
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Bintang $starValue",
-                        tint = if (starValue <= ratingInput) CoralColor else Color.LightGray,
+                        tint = if (starValue <= viewModel.ratingInput) CoralColor else Color.LightGray,
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable { onRatingChange(starValue) }
+                            .clickable { viewModel.onRatingChange(starValue) }
                     )
                 }
             }
@@ -97,8 +71,8 @@ fun UlasanFormContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(
-                value = commentInput,
-                onValueChange = onCommentChange,
+                value = viewModel.commentInput,
+                onValueChange = { viewModel.onCommentChange(it) },
                 label = { Text("Tuliskan pengalamanmu...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
@@ -114,35 +88,20 @@ fun UlasanFormContent(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = onSubmit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
+                onClick = {
+                    viewModel.submitUlasan(
+                        eventId = eventId,
+                        userId = userId,
+                        username = username,
+                        onSuccess = { onSuccessNavigateBack() }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = IndigoTextColor)
             ) {
-                Text(
-                    "Kirim Ulasan",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("Kirim Ulasan", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun UlasanFormScreenPreview() {
-    ManageventTheme {
-        UlasanFormContent(
-            eventId = "EVT-101",
-            ratingInput = 5,
-            onRatingChange = {},
-            commentInput = "Acaranya sangat bagus dan tertata rapi!",
-            onCommentChange = {},
-            onSubmit = {}
-        )
     }
 }

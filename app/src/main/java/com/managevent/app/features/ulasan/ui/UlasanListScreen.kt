@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -21,9 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.ulasan.data.UlasanModel
@@ -39,8 +40,9 @@ val BackgroundColor = Color(0xFFFCF8FF)
 
 @Composable
 fun UlasanListScreen(
-    eventId: String = "MASUKKAN_UUID_ASLI_DISINI",
-    onAddUlasanClick: () -> Unit = {},
+    eventId: String,
+    onBackClick: () -> Unit, // <--- TAMBAHAN
+    onAddUlasanClick: () -> Unit,
     viewModel: UlasanViewModel = viewModel()
 ) {
     val uiState by viewModel.ulasanState.collectAsStateWithLifecycle()
@@ -54,10 +56,12 @@ fun UlasanListScreen(
         selectedFilter = viewModel.selectedRatingFilter,
         onFilterClick = { viewModel.onFilterChanged(it) },
         onDeleteClick = { viewModel.deleteUlasan(it, eventId) },
-        onAddUlasanClick = onAddUlasanClick
+        onAddUlasanClick = onAddUlasanClick,
+        onBackClick = onBackClick // <--- LEMPAR KE CONTENT
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UlasanListContent(
     uiState: UiState<List<UlasanModel>>,
@@ -65,11 +69,23 @@ fun UlasanListContent(
     onFilterClick: (Int) -> Unit,
     onDeleteClick: (String) -> Unit,
     onAddUlasanClick: () -> Unit,
+    onBackClick: () -> Unit, // <--- TAMBAHAN
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { AppTopBar(title = "Ulasan List") },
+        topBar = {
+            // GANTI AppTopBar JADI TopAppBar BIAR ADA TOMBOL BACK
+            TopAppBar(
+                title = { Text("Ulasan Event", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            )
+        },
         bottomBar = {
             Box(
                 modifier = Modifier
@@ -98,10 +114,7 @@ fun UlasanListContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                HeroRatingCard()
-            }
-
+            item { HeroRatingCard() }
             item {
                 Text("Filter Rating:", fontWeight = FontWeight.Bold, color = Color(0xFF181445))
                 LazyRow(
@@ -113,42 +126,19 @@ fun UlasanListContent(
                         FilterChip(
                             selected = isSelected,
                             onClick = { onFilterClick(rating) },
-                            label = {
-                                Text(
-                                    text = if (rating == 0) "Semua" else "$rating Bintang",
-                                    color = if (isSelected) IndigoTextColor else GrayTextColor
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = LilacActiveColor,
-                                containerColor = GrayInactiveColor
-                            ),
+                            label = { Text(if (rating == 0) "Semua" else "$rating Bintang", color = if (isSelected) IndigoTextColor else GrayTextColor) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LilacActiveColor, containerColor = GrayInactiveColor),
                             border = null
                         )
                     }
                 }
             }
-
             when (uiState) {
-                is UiState.Loading -> {
-                    item {
-                        Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = IndigoTextColor)
-                        }
-                    }
-                }
-                is UiState.Error -> {
-                    item {
-                        Text(uiState.message, color = MaterialTheme.colorScheme.error)
-                    }
-                }
+                is UiState.Loading -> item { Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = IndigoTextColor) } }
+                is UiState.Error -> item { Text(uiState.message, color = MaterialTheme.colorScheme.error) }
                 is UiState.Success -> {
                     if (uiState.data.isEmpty()) {
-                        item {
-                            Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                Text("Tidak ada ulasan.", color = GrayTextColor)
-                            }
-                        }
+                        item { Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) { Text("Tidak ada ulasan.", color = GrayTextColor) } }
                     } else {
                         items(uiState.data, key = { it.id }) { ulasan ->
                             UlasanItemCard(ulasan = ulasan, onDeleteClick = onDeleteClick)
@@ -157,7 +147,6 @@ fun UlasanListContent(
                 }
                 else -> {}
             }
-
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
@@ -172,11 +161,7 @@ fun HeroRatingCard() {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("Skor Rata-rata", color = GrayTextColor, style = MaterialTheme.typography.labelMedium)
                     Row(verticalAlignment = Alignment.Bottom) {
@@ -186,9 +171,7 @@ fun HeroRatingCard() {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Row {
-                        repeat(5) { index ->
-                            Icon(Icons.Default.Star, contentDescription = null, tint = if(index < 4) CoralColor else Color.LightGray, modifier = Modifier.size(20.dp))
-                        }
+                        repeat(5) { index -> Icon(Icons.Default.Star, contentDescription = null, tint = if(index < 4) CoralColor else Color.LightGray, modifier = Modifier.size(20.dp)) }
                     }
                     Text("Berdasarkan 124 ulasan", color = GrayTextColor, style = MaterialTheme.typography.bodySmall)
                 }
@@ -205,32 +188,18 @@ fun HeroRatingCard() {
 
 @Composable
 fun RatingProgressBar(star: Int, count: Int, percentage: Float) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 2.dp)
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
         Text(star.toString(), style = MaterialTheme.typography.labelSmall, color = GrayTextColor, modifier = Modifier.width(16.dp))
         Icon(Icons.Default.Star, contentDescription = null, tint = CoralColor, modifier = Modifier.size(12.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        LinearProgressIndicator(
-            progress = { percentage },
-            modifier = Modifier
-                .weight(1f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = CoralColor,
-            trackColor = GrayInactiveColor,
-        )
+        LinearProgressIndicator(progress = { percentage }, modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)), color = CoralColor, trackColor = GrayInactiveColor)
         Spacer(modifier = Modifier.width(8.dp))
         Text(count.toString(), style = MaterialTheme.typography.labelSmall, color = GrayTextColor, modifier = Modifier.width(24.dp))
     }
 }
 
 @Composable
-fun UlasanItemCard(
-    ulasan: UlasanModel,
-    onDeleteClick: (String) -> Unit
-) {
+fun UlasanItemCard(ulasan: UlasanModel, onDeleteClick: (String) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -251,35 +220,12 @@ fun UlasanItemCard(
                     Icon(Icons.Default.Delete, "Hapus", tint = Color.Gray)
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Row {
-                repeat(5) { i ->
-                    Icon(Icons.Default.Star, contentDescription = null, tint = if (i < ulasan.rating) CoralColor else Color.LightGray, modifier = Modifier.size(16.dp))
-                }
+                repeat(5) { i -> Icon(Icons.Default.Star, contentDescription = null, tint = if (i < ulasan.rating) CoralColor else Color.LightGray, modifier = Modifier.size(16.dp)) }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(ulasan.comment, color = Color(0xFF181445), style = MaterialTheme.typography.bodyMedium)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun UlasanListContentPreview() {
-    ManageventTheme {
-        UlasanListContent(
-            uiState = UiState.Success(listOf(
-                UlasanModel(id = "1", username = "Sarah Wijaya", rating = 5, comment = "Pengalaman pertama kali hadir di festival musik ini dan luar biasa rapi. Manajemen antrean toilet dan tempat ibadah dipersiapkan dengan baik."),
-                UlasanModel(id = "2", username = "Budi Pratama", rating = 4, comment = "Bintang tamu dan visual panggung spektakuler! Sedikit masukan untuk pendingin udara di area VIP lounge.")
-            )),
-            selectedFilter = 0,
-            onFilterClick = {},
-            onDeleteClick = {},
-            onAddUlasanClick = {}
-        )
     }
 }

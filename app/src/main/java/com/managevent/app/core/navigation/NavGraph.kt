@@ -85,6 +85,7 @@ fun AppNavHost(
             val eventId = backStackEntry.arguments?.getString("eventId") ?: "dummy-event-id"
             UlasanListScreen(
                 eventId = eventId,
+                onBackClick = { navController.popBackStack() }, // <--- TAMBAHKAN INI
                 onAddUlasanClick = {
                     navController.navigate(Screen.UlasanForm.createRoute(eventId))
                 }
@@ -94,6 +95,7 @@ fun AppNavHost(
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
             UlasanFormScreen(
                 eventId = eventId,
+                onBackClick = { navController.popBackStack() }, // <--- TAMBAHKAN INI
                 onSuccessNavigateBack = { navController.popBackStack() }
             )
         }
