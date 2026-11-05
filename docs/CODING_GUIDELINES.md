@@ -1,82 +1,77 @@
-# 📐 Coding Guidelines & Standar Arsitektur (MVVM + UDF)
+# 📐 Coding Guidelines & Standar Arsitektur (MVVM + UDF + ViewModel Hoisting)
 
 Dokumen ini adalah aturan arsitektur wajib yang harus diikuti saat menulis kode di proyek **Managevent**. Berlaku untuk seluruh anggota tim dan semua modul fitur.
 
 ---
 
-## 1. Lapisan & Tanggung Jawab (MVVM)
+## 1. Lapisan & Tanggung Jawab (MVVM + NavHost ViewModel Hoisting)
 
 | Lapisan | Isi | Tugas Utama | Dilarang |
 |---|---|---|---|
 | **Model** | `data class`, `Repository`, Supabase Client | Menyediakan & mengolah data | Mengenal UI, Context, atau Composable |
-| **View (UI)** | Fungsi `@Composable` (Screen, Content) | Menampilkan state, meneruskan event user ke ViewModel | Mengambil data langsung, menyimpan logika bisnis |
-| **ViewModel** | Turunan `androidx.lifecycle.ViewModel` | Menyimpan UI State, menerima event, memanggil Repository | Menyimpan referensi `Context`, `Activity`, atau Composable |
+| **View (UI)** | Fungsi `@Composable` (Screen, Content) | Menampilkan state, meneruskan event user via callback | Mengambil data langsung, menyimpan ViewModel di Screen |
+| **ViewModel** | Turunan `androidx.lifecycle.ViewModel` | Menyimpan UI State, menerima event, memanggil Repository | Disimpan di dalam Screen Composable |
+| **NavHost (`NavGraph.kt`)** | `AppNavHost` & Rute Navigasi | Menginstansiasi ViewModel, membaca state, menghubungkan Screen | Menyimpan logika bisnis |
 
 ---
 
 ## 2. Unidirectional Data Flow (UDF)
 
-- **State mengalir TURUN**: ViewModel -> `XxxScreen` -> `XxxContent` (UI).
-- **Event mengalir NAIK**: User click -> `XxxContent` (lambda) -> `XxxScreen` -> ViewModel.
-
-### Aturan Utama UDF:
-1. State **hanya boleh diubah** di ViewModel.
-2. View **hanya membaca state** dan mengirim event via callback/lambda.
-3. Objek List harus diperbarui dengan **objek/list baru** (`list + item`, `filterNot`), jangan mutasi `list.add()`.
+- **State mengalir TURUN**: `NavGraph.kt` (ViewModel State) -> `XxxScreen` -> `XxxContent` (UI).
+- **Event mengalir NAIK**: User click -> `XxxContent` (lambda) -> `XxxScreen` (lambda) -> `NavGraph.kt` (ViewModel Action).
 
 ---
 
-## 3. Aturan Screen & Content (State Hoisting)
+## 3. Aturan Screen & Content (State Hoisting & ViewModel in NavHost)
 
-Setiap layar wajib dipisah menjadi 2 Composable function:
-
-1. **`XxxScreen` (Stateful)**:
-   - Memegang `ViewModel`.
-   - Mengamati state dengan `collectAsStateWithLifecycle()`.
-   - Meneruskan data state & lambda event ke `XxxContent`.
-2. **`XxxContent` (Stateless)**:
-   - **Hanya menerima nilai/data biasa** dan lambda event.
-   - Tidak memegang `ViewModel` atau memanggil Repository.
-   - Memiliki parameter wajib `modifier: Modifier = Modifier`.
-   - **Wajib memiliki `@Preview`** dengan data dummy.
+> 🚨 **DILARANG MENGINSTANSIASI ATAU MENGANAMKAN VIEWMODEL DI DALAM SCREEN**
+>
+> 1. `XxxScreen` maupun `XxxContent` **TIDAK BOLEH** menerima atau menginstansiasi `ViewModel` (misal: `viewModel: XxxViewModel = viewModel()`).
+> 2. Seluruh `ViewModel` diinstansiasi di tingkat **`NavGraph.kt` (`AppNavHost`)**.
+> 3. Observasi state `collectAsStateWithLifecycle()` dilakukan di **`NavGraph.kt`**.
+> 4. `XxxScreen` dan `XxxContent` hanya menerima data state murni (`UiState`, String, Int, List) dan callback lambda event (`onEvent: () -> Unit`).
 
 ```kotlin
-// Stateful Screen
-@Composable
-fun KatalogListScreen(
-    modifier: Modifier = Modifier,
-    viewModel: KatalogViewModel = viewModel(),
-    onEventClick: (String) -> Unit = {}
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+// 1. Contoh di NavGraph.kt (ViewModel Hoisted di NavHost)
+composable(Screen.KatalogList.route) {
+    val viewModel: KatalogViewModel = viewModel()
+    val eventsState by viewModel.eventsState.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
-    KatalogListContent(
-        uiState = uiState,
-        onEventClick = onEventClick,
-        modifier = modifier
+    KatalogListScreen(
+        eventsState = eventsState,
+        searchQuery = searchQuery,
+        selectedCategory = selectedCategory,
+        onEventClick = { id -> navController.navigate(Screen.KatalogDetail.createRoute(id)) },
+        onSearchQueryChange = viewModel::onSearchQueryChange,
+        onCategorySelected = viewModel::onCategorySelected,
+        onFavoriteToggle = viewModel::toggleFavorite
     )
 }
 
-// Stateless Content
+// 2. Contoh di KatalogListScreen.kt (Pure Data & Stateless Screen)
 @Composable
-fun KatalogListContent(
-    uiState: UiState<List<EventModel>>,
+fun KatalogListScreen(
+    eventsState: UiState<List<EventModel>>,
+    searchQuery: String,
+    selectedCategory: String,
     onEventClick: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
+    onFavoriteToggle: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Render UI murni berdasarkan uiState
-}
-
-// Preview dengan Dummy Data
-@Preview(showBackground = true)
-@Composable
-fun KatalogListContentPreview() {
-    ManageventTheme {
-        KatalogListContent(
-            uiState = UiState.Success(listOf(/* dummy events */)),
-            onEventClick = {}
-        )
-    }
+    KatalogListContent(
+        eventsState = eventsState,
+        searchQuery = searchQuery,
+        selectedCategory = selectedCategory,
+        onEventClick = onEventClick,
+        onSearchQueryChange = onSearchQueryChange,
+        onCategorySelected = onCategorySelected,
+        onFavoriteToggle = onFavoriteToggle,
+        modifier = modifier
+    )
 }
 ```
 
@@ -91,17 +86,6 @@ fun KatalogListContentPreview() {
    val uiState: StateFlow<UiState<List<EventModel>>> = _uiState.asStateFlow()
    ```
 3. Update `MutableStateFlow` menggunakan `.update { it.copy(...) }`.
-
-### Pola Input Form (TextField) di ViewModel
-Untuk teks input form yang divalidasi/dikirim ke server:
-```kotlin
-var emailInput by mutableStateOf("")
-    private set
-
-fun onEmailChange(newValue: String) {
-    emailInput = newValue
-}
-```
 
 ---
 
@@ -128,9 +112,8 @@ fun onEmailChange(newValue: String) {
 
 ## 6. Checklist Sebelum Commit / PR
 
+- [ ] **Tidak ada `viewModel()` atau `ViewModel` di dalam file `Screen` / `Content`**.
+- [ ] ViewModel diinstansiasi dan dibaca di `NavGraph.kt`.
 - [ ] Screen & Content dipisah, Content stateless dan memiliki `@Preview`.
-- [ ] State dibaca dengan `collectAsStateWithLifecycle()`.
-- [ ] Tidak ada pemanggilan Repository / Retrofit / Supabase di dalam Composable.
-- [ ] ViewModel tidak menyimpan `Context`, `Activity`, atau Composable.
-- [ ] `CancellationException` dilempar ulang pada `catch` block.
+- [ ] `CancellationException` dilempar ulang pada `catch` block di ViewModel.
 - [ ] Menambahkan `key` pada item List (`LazyColumn` / `LazyVerticalGrid`).
