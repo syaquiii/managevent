@@ -24,6 +24,12 @@ class PemesananViewModel(
     private val _detailState = MutableStateFlow<UiState<TransaksiModel>>(UiState.Idle)
     val detailState: StateFlow<UiState<TransaksiModel>> = _detailState.asStateFlow()
 
+    fun consumeCheckoutSuccess() {
+        if (_checkoutState.value is UiState.Success) {
+            _checkoutState.value = UiState.Idle
+        }
+    }
+
     fun fetchRiwayat() {
         viewModelScope.launch {
             _riwayatState.value = UiState.Loading

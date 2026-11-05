@@ -84,7 +84,7 @@ fun CheckoutScreen(
 ) {
     val checkoutState by viewModel.checkoutState.collectAsStateWithLifecycle()
     val eventState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
-    var jumlahTiket by rememberSaveable(eventId) { mutableIntStateOf(2) }
+    var jumlahTiket by rememberSaveable(eventId) { mutableIntStateOf(1) }
     var catatan by rememberSaveable(eventId) { mutableStateOf("") }
 
     LaunchedEffect(eventId) {
@@ -92,7 +92,10 @@ fun CheckoutScreen(
     }
 
     LaunchedEffect(checkoutState) {
-        if (checkoutState is UiState.Success) onSuccessSubmit()
+        if (checkoutState is UiState.Success) {
+            viewModel.consumeCheckoutSuccess()
+            onSuccessSubmit()
+        }
     }
 
     CheckoutContent(
@@ -521,7 +524,7 @@ fun CheckoutContentPreview() {
                     imageUrl = null
                 )
             ),
-            jumlahTiket = 2,
+            jumlahTiket = 1,
             catatan = "",
             checkoutState = UiState.Idle,
             onBackClick = {},

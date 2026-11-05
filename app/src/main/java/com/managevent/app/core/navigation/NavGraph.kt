@@ -84,6 +84,14 @@ fun AppNavHost(
         }
         composable(Screen.RiwayatPemesanan.route) {
             RiwayatPemesananScreen(
+                onBackClick = {
+                    val popped = navController.popBackStack()
+                    if (!popped) {
+                        navController.navigate(Screen.KatalogList.route) {
+                            popUpTo(Screen.KatalogList.route) { inclusive = true }
+                        }
+                    }
+                },
                 onTransactionClick = { pemesananId ->
                     navController.navigate(Screen.DetailPemesanan.createRoute(pemesananId))
                 }

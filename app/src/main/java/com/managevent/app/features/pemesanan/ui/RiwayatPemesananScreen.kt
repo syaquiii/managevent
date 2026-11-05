@@ -74,6 +74,7 @@ private val orderStatuses = listOf("Berjalan", "Selesai")
 fun RiwayatPemesananScreen(
     modifier: Modifier = Modifier,
     viewModel: PemesananViewModel = viewModel(),
+    onBackClick: (() -> Unit)? = null,
     onTransactionClick: (String) -> Unit = {}
 ) {
     val riwayatState by viewModel.riwayatState.collectAsStateWithLifecycle()
@@ -84,6 +85,7 @@ fun RiwayatPemesananScreen(
 
     RiwayatPemesananContent(
         riwayatState = riwayatState,
+        onBackClick = onBackClick,
         onTransactionClick = onTransactionClick,
         modifier = modifier
     )
@@ -93,7 +95,8 @@ fun RiwayatPemesananScreen(
 fun RiwayatPemesananContent(
     riwayatState: UiState<List<TransaksiModel>>,
     onTransactionClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBackClick: (() -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(pageCount = { orderStatuses.size })
     val coroutineScope = rememberCoroutineScope()
@@ -101,7 +104,7 @@ fun RiwayatPemesananContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Surface,
-        topBar = { AppTopBar(title = "Pesanan") }
+        topBar = { AppTopBar(title = "Pesanan", onBackClick = onBackClick) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
