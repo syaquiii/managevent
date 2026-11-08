@@ -34,8 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,35 +42,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.agenda.data.BookedEventModel
-import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
 
-// ---------- Stateful ----------
 @Composable
 fun BookedEventListScreen(
+    state: UiState<List<BookedEventModel>>,
+    query: String,
     modifier: Modifier = Modifier,
-    viewModel: AgendaViewModel = viewModel(),
+    onQueryChange: (String) -> Unit = {},
     onOpenNotes: (String) -> Unit = {}
 ) {
-    val state by viewModel.bookedState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) { viewModel.loadBookedEvents() }
-
     BookedEventListContent(
         state = state,
-        query = viewModel.searchQuery,
-        onQueryChange = viewModel::onSearchChange,
+        query = query,
+        onQueryChange = onQueryChange,
         onOpenNotes = onOpenNotes,
         modifier = modifier
     )
 }
 
-// ---------- Stateless ----------
 @Composable
 fun BookedEventListContent(
     state: UiState<List<BookedEventModel>>,
@@ -153,7 +144,6 @@ private fun BookedEventCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                // Event Thumbnail
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -169,7 +159,6 @@ private fun BookedEventCard(
                     )
                 }
 
-                // Info Column
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -223,7 +212,6 @@ private fun BookedEventCard(
                         }
                     }
 
-                    // Badges Cluster
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -231,7 +219,6 @@ private fun BookedEventCard(
                     ) {
                         StatusChip(status = event.status)
 
-                        // Note Count Badge
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
@@ -260,7 +247,6 @@ private fun BookedEventCard(
                 }
             }
 
-            // Full-Width "Buka Catatan" Button
             Button(
                 onClick = onOpenNotes,
                 shape = RoundedCornerShape(12.dp),
@@ -346,7 +332,6 @@ private fun EmptyBookedState(isSearching: Boolean, onExplore: () -> Unit) {
     }
 }
 
-// ---------- Preview ----------
 @Preview(showBackground = true)
 @Composable
 fun BookedEventListContentPreview() {
@@ -354,9 +339,7 @@ fun BookedEventListContentPreview() {
         BookedEventListContent(
             state = UiState.Success(
                 listOf(
-                    BookedEventModel("1", "Pameran Pernikahan Nusantara 2026", "18 Juli 2026", "Grand Ballroom Jakarta", null, "Berjalan", 6),
-                    BookedEventModel("2", "Jakarta Jazz Symphony 2026", "24 Agustus 2026", "Istora Senayan Jakarta", null, "Berjalan", 4),
-                    BookedEventModel("3", "Bandung Creative Summit 2026", "12 Maret 2026", "Convention Hall Bandung", null, "Selesai", 8)
+                    BookedEventModel("1", "Pameran Pernikahan Nusantara 2026", "18 Juli 2026", "Grand Ballroom Jakarta", null, "Berjalan", 6)
                 )
             ),
             query = "",

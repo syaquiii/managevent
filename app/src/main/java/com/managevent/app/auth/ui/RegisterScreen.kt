@@ -36,9 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 
-import com.managevent.app.auth.viewmodel.AuthViewModel
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
 import com.managevent.app.core.theme.ManageventTheme
@@ -46,14 +44,13 @@ import com.managevent.app.core.theme.ManageventTheme
 @Composable
 fun RegisterScreen(
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel(),
-    onNavigateToLogin: () -> Unit = {},
-    onRegisterSuccess: () -> Unit = {}
+    onRegisterClick: (String, String, String, String) -> Unit = { _, _, _, _ -> },
+    onNavigateToLogin: () -> Unit = {}
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var selectedRole by remember { mutableStateOf("PEMESAN") } // "PEMESAN" atau "VENDOR"
+    var selectedRole by remember { mutableStateOf("PEMESAN") }
 
     RegisterContent(
         fullName = fullName,
@@ -64,10 +61,7 @@ fun RegisterScreen(
         onPasswordChange = { password = it },
         selectedRole = selectedRole,
         onRoleChange = { selectedRole = it },
-        onRegisterClick = {
-            viewModel.register(email, password, fullName, selectedRole)
-            onRegisterSuccess()
-        },
+        onRegisterClick = { onRegisterClick(email, password, fullName, selectedRole) },
         onNavigateToLogin = onNavigateToLogin,
         modifier = modifier
     )
@@ -101,7 +95,6 @@ fun RegisterContent(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Brand Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -142,7 +135,6 @@ fun RegisterContent(
                 modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
             )
 
-            // RBAC Role Selection Segment (Pemesan vs Vendor)
             Text(
                 text = "Daftar Sebagai",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -184,7 +176,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Full Name Input
             Text(
                 text = "Nama Lengkap",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -209,7 +200,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email Input
             Text(
                 text = "Email",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -234,7 +224,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Input
             Text(
                 text = "Password",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -259,7 +248,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Register Button
             AppButton(
                 text = "Daftar Akun",
                 onClick = onRegisterClick,
@@ -268,7 +256,6 @@ fun RegisterContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Footer
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,

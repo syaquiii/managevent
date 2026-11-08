@@ -35,8 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,8 +44,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.components.StatusChip
@@ -63,7 +59,6 @@ import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.pemesanan.data.TransaksiModel
-import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
@@ -72,17 +67,11 @@ private val orderStatuses = listOf("Berjalan", "Selesai")
 
 @Composable
 fun RiwayatPemesananScreen(
+    riwayatState: UiState<List<TransaksiModel>>,
     modifier: Modifier = Modifier,
-    viewModel: PemesananViewModel = viewModel(),
     onBackClick: (() -> Unit)? = null,
     onTransactionClick: (String) -> Unit = {}
 ) {
-    val riwayatState by viewModel.riwayatState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        viewModel.fetchRiwayat()
-    }
-
     RiwayatPemesananContent(
         riwayatState = riwayatState,
         onBackClick = onBackClick,

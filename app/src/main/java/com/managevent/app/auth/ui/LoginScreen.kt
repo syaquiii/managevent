@@ -26,7 +26,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,10 +41,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 
-import com.managevent.app.auth.viewmodel.AuthViewModel
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
 import com.managevent.app.core.theme.ManageventTheme
@@ -53,9 +49,8 @@ import com.managevent.app.core.theme.ManageventTheme
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel(),
-    onNavigateToRegister: () -> Unit = {},
-    onLoginSuccess: () -> Unit = {}
+    onLoginClick: (String, String) -> Unit = { _, _ -> },
+    onNavigateToRegister: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -65,10 +60,7 @@ fun LoginScreen(
         onEmailChange = { email = it },
         password = password,
         onPasswordChange = { password = it },
-        onLoginClick = {
-            viewModel.login(email, password)
-            onLoginSuccess()
-        },
+        onLoginClick = { onLoginClick(email, password) },
         onNavigateToRegister = onNavigateToRegister,
         modifier = modifier
     )
@@ -101,7 +93,6 @@ fun LoginContent(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Brand Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -142,7 +133,6 @@ fun LoginContent(
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
             )
 
-            // Email Input
             Text(
                 text = "Email",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -167,7 +157,6 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Password Input
             Text(
                 text = "Password",
                 style = MaterialTheme.typography.labelLarge.copy(
@@ -200,7 +189,6 @@ fun LoginContent(
                 )
             )
 
-            // Forgot Password
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,7 +207,6 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Login Button (Coral CTA)
             AppButton(
                 text = "Masuk Sekarang",
                 onClick = onLoginClick,
@@ -228,7 +215,6 @@ fun LoginContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Footer
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,

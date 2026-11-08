@@ -54,37 +54,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.theme.ManageventTheme
-import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-// ---------- Stateful ----------
 @Composable
 fun AgendaFormScreen(
+    isEditMode: Boolean,
+    titleInput: String,
+    notesInput: String,
+    dateInput: String,
+    isDoneInput: Boolean,
+    titleError: String?,
+    dateError: String?,
+    isSaving: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: AgendaViewModel = viewModel(),
+    onTitleChange: (String) -> Unit = {},
+    onNotesChange: (String) -> Unit = {},
+    onDateChange: (String) -> Unit = {},
+    onDoneChange: (Boolean) -> Unit = {},
+    onSave: () -> Unit = {},
+    onDeleteCurrentNote: (() -> Unit) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     AgendaFormContent(
-        isEditMode = viewModel.isEditMode,
-        titleInput = viewModel.titleInput,
-        notesInput = viewModel.notesInput,
-        dateInput = viewModel.dateInput,
-        isDoneInput = viewModel.isDoneInput,
-        titleError = viewModel.titleError,
-        dateError = viewModel.dateError,
-        isSaving = viewModel.isSaving,
-        onTitleChange = viewModel::onTitleChange,
-        onNotesChange = viewModel::onNotesChange,
-        onDateChange = viewModel::onDateChange,
-        onDoneChange = viewModel::onDoneChange,
-        onSave = { viewModel.save(onSuccess = onBack) },
+        isEditMode = isEditMode,
+        titleInput = titleInput,
+        notesInput = notesInput,
+        dateInput = dateInput,
+        isDoneInput = isDoneInput,
+        titleError = titleError,
+        dateError = dateError,
+        isSaving = isSaving,
+        onTitleChange = onTitleChange,
+        onNotesChange = onNotesChange,
+        onDateChange = onDateChange,
+        onDoneChange = onDoneChange,
+        onSave = onSave,
         onDelete = { showDeleteDialog = true },
         onBack = onBack,
         modifier = modifier
@@ -100,7 +110,7 @@ fun AgendaFormScreen(
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
-                        viewModel.deleteCurrentNote(onDone = onBack)
+                        onDeleteCurrentNote(onBack)
                     }
                 ) {
                     Text("Hapus", color = MaterialTheme.colorScheme.error)
@@ -115,7 +125,6 @@ fun AgendaFormScreen(
     }
 }
 
-// ---------- Stateless ----------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaFormContent(
@@ -164,7 +173,6 @@ fun AgendaFormContent(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Field 1: Judul
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -219,7 +227,6 @@ fun AgendaFormContent(
                 }
             }
 
-            // Field 2: Isi Catatan
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -252,7 +259,6 @@ fun AgendaFormContent(
                 )
             }
 
-            // Field 3: Target Selesai
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -332,7 +338,6 @@ fun AgendaFormContent(
                 }
             }
 
-            // Field 4: Switch Status Penyelesaian
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -394,7 +399,6 @@ fun AgendaFormContent(
 
             Spacer(Modifier.height(8.dp))
 
-            // Coral "Simpan" Button (#FC6955 / secondaryContainer)
             Button(
                 onClick = onSave,
                 enabled = !isSaving,
@@ -423,7 +427,6 @@ fun AgendaFormContent(
                 }
             }
 
-            // "Hapus Catatan" Button (Edit Mode Only)
             if (isEditMode) {
                 Button(
                     onClick = onDelete,
@@ -448,7 +451,6 @@ fun AgendaFormContent(
         }
     }
 
-    // Material 3 Date Picker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -479,8 +481,6 @@ fun AgendaFormContent(
     }
 }
 
-// ---------- Previews ----------
-
 @Preview(showBackground = true, name = "(a) Mode Tambah Kosong")
 @Composable
 fun AgendaFormContentAddPreview() {
@@ -491,54 +491,6 @@ fun AgendaFormContentAddPreview() {
             notesInput = "",
             dateInput = "",
             isDoneInput = false,
-            titleError = null,
-            dateError = null,
-            isSaving = false,
-            onTitleChange = {},
-            onNotesChange = {},
-            onDateChange = {},
-            onDoneChange = {},
-            onSave = {},
-            onDelete = {},
-            onBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "(b) Mode Tambah Validasi Error")
-@Composable
-fun AgendaFormContentErrorPreview() {
-    ManageventTheme {
-        AgendaFormContent(
-            isEditMode = false,
-            titleInput = "",
-            notesInput = "",
-            dateInput = "",
-            isDoneInput = false,
-            titleError = "Judul wajib diisi",
-            dateError = "Target selesai wajib diisi",
-            isSaving = false,
-            onTitleChange = {},
-            onNotesChange = {},
-            onDateChange = {},
-            onDoneChange = {},
-            onSave = {},
-            onDelete = {},
-            onBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "(c) Mode Ubah Terisi")
-@Composable
-fun AgendaFormContentEditPreview() {
-    ManageventTheme {
-        AgendaFormContent(
-            isEditMode = true,
-            titleInput = "Konfirmasi busana pengantin",
-            notesInput = "Fitting busana akhir bersama Sanggar Nusantara dan fotografer utama.",
-            dateInput = "2026-06-25",
-            isDoneInput = true,
             titleError = null,
             dateError = null,
             isSaving = false,

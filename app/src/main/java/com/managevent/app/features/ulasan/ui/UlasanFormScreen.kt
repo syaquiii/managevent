@@ -14,34 +14,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.theme.ManageventTheme
-import com.managevent.app.features.ulasan.viewmodel.UlasanViewModel
 
 @Composable
 fun UlasanFormScreen(
-    eventId: String = "dummy-event-id",
-    userId: String = "dummy-user-id",
-    username: String = "User Uji",
-    onSuccessNavigateBack: () -> Unit = {},
-    viewModel: UlasanViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    eventId: String,
+    ratingInput: Int,
+    commentInput: String,
+    modifier: Modifier = Modifier,
+    onRatingChange: (Int) -> Unit = {},
+    onCommentChange: (String) -> Unit = {},
+    onSubmit: () -> Unit = {}
 ) {
     UlasanFormContent(
         eventId = eventId,
-        ratingInput = viewModel.ratingInput,
-        onRatingChange = viewModel::onRatingChange,
-        commentInput = viewModel.commentInput,
-        onCommentChange = viewModel::onCommentChange,
-        onSubmit = {
-            viewModel.submitUlasan(
-                eventId = eventId,
-                userId = userId,
-                username = username,
-                onSuccess = onSuccessNavigateBack
-            )
-        },
+        ratingInput = ratingInput,
+        onRatingChange = onRatingChange,
+        commentInput = commentInput,
+        onCommentChange = onCommentChange,
+        onSubmit = onSubmit,
         modifier = modifier
     )
 }

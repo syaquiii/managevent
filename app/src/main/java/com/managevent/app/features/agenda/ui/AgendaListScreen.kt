@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,50 +56,34 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.agenda.data.AgendaModel
-import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
 
-// ---------- Stateful ----------
 @Composable
 fun AgendaListScreen(
-    eventId: String = "",
+    state: UiState<List<AgendaModel>>,
     modifier: Modifier = Modifier,
-    viewModel: AgendaViewModel = viewModel(),
     onBack: () -> Unit = {},
     onAddNote: () -> Unit = {},
-    onEditNote: (AgendaModel) -> Unit = {}
+    onEditNote: (AgendaModel) -> Unit = {},
+    onToggleDone: (AgendaModel) -> Unit = {},
+    onDeleteNote: (String) -> Unit = {}
 ) {
-    val state by viewModel.notesState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(eventId) { viewModel.loadNotes(eventId) }
-    LaunchedEffect(Unit) {
-        viewModel.message.collect { snackbarHostState.showSnackbar(it) }
-    }
 
     AgendaListContent(
         state = state,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onAddNote = {
-            viewModel.startAdd()
-            onAddNote()
-        },
-        onEditNote = { note ->
-            viewModel.startEdit(note)
-            onEditNote(note)
-        },
-        onToggleDone = viewModel::toggleDone,
-        onDeleteNote = { id -> viewModel.deleteNote(id) },
+        onAddNote = onAddNote,
+        onEditNote = onEditNote,
+        onToggleDone = onToggleDone,
+        onDeleteNote = onDeleteNote,
         modifier = modifier
     )
 }
 
-// ---------- Stateless ----------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaListContent(
@@ -161,7 +144,6 @@ fun AgendaListContent(
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Event Context Header Card
                         item {
                             EventContextCard(
                                 title = "Pameran Pernikahan Nusantara 2026",
@@ -355,7 +337,6 @@ private fun NoteCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Square Custom Checkbox
             Box(
                 modifier = Modifier
                     .size(24.dp)
@@ -472,7 +453,6 @@ private fun EmptyNotesState(modifier: Modifier = Modifier) {
     }
 }
 
-// ---------- Preview ----------
 @Preview(showBackground = true)
 @Composable
 fun AgendaListContentPreview() {
@@ -480,10 +460,7 @@ fun AgendaListContentPreview() {
         AgendaListContent(
             state = UiState.Success(
                 listOf(
-                    AgendaModel("1", null, "e1", "Konfirmasi busana pengantin", "2026-06-25", "Fitting busana akhir bersama Sanggar...", true),
-                    AgendaModel("2", null, "e1", "Cetak tiket & barcode QR", "2026-07-02", "Koordinasi vendor percetakan...", false),
-                    AgendaModel("3", null, "e1", "Susun rundown kedatangan vendor", "2026-07-10", "Plotting waktu loading-in sound...", false),
-                    AgendaModel("4", null, "e1", "Review checklist katering", "2026-07-14", "Finalisasi 12 menu prasmanan...", false)
+                    AgendaModel("1", null, "e1", "Konfirmasi busana pengantin", "2026-06-25", "Fitting busana akhir...", true)
                 )
             ),
             onBack = {},

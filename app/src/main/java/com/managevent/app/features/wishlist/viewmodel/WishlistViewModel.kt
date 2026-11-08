@@ -29,6 +29,9 @@ class WishlistViewModel(
     // List asli seluruh favorit
     private var allWishlistEvents: List<EventModel> = emptyList()
 
+    val totalCount: Int
+        get() = allWishlistEvents.size
+
     // Kategori yang tersedia
     val categories = listOf("Semua", "Konser Musik", "Pernikahan", "Festival", "Pameran")
 
@@ -36,7 +39,6 @@ class WishlistViewModel(
         viewModelScope.launch {
             _wishlistState.value = UiState.Loading
             try {
-                // Simulasi fetching data dengan fallback data mock sesuai desain
                 delay(300)
                 allWishlistEvents = listOf(
                     EventModel(
@@ -135,16 +137,13 @@ class WishlistViewModel(
     fun removeFromWishlist(eventId: String, userId: String = "dummy-user-id") {
         viewModelScope.launch {
             try {
-                // Hapus dari memori lokal untuk UX yang instan
                 allWishlistEvents = allWishlistEvents.filterNot { it.id == eventId }
                 applyFilter()
-
-                // Hapus di Supabase
                 repository.removeFromWishlist(userId, eventId)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                // Ignore error for smooth UI feel
+                // Ignore
             }
         }
     }

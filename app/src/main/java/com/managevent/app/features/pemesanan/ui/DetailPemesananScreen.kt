@@ -32,8 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +40,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
@@ -58,30 +54,22 @@ import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.pemesanan.data.TransaksiModel
-import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
 fun DetailPemesananScreen(
-    pemesananId: String = "",
+    detailState: UiState<TransaksiModel>,
     modifier: Modifier = Modifier,
-    viewModel: PemesananViewModel = viewModel(),
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onMarkFinished: () -> Unit = {},
+    onCancelClick: () -> Unit = {}
 ) {
-    val detailState by viewModel.detailState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(pemesananId) {
-        if (pemesananId.isNotBlank()) {
-            viewModel.fetchDetailById(pemesananId)
-        }
-    }
-
     DetailPemesananContent(
         detailState = detailState,
         onBackClick = onBackClick,
-        onMarkFinished = { viewModel.updateStatus(pemesananId, "Selesai") },
-        onCancelClick = { viewModel.cancelPemesanan(pemesananId) },
+        onMarkFinished = onMarkFinished,
+        onCancelClick = onCancelClick,
         modifier = modifier
     )
 }

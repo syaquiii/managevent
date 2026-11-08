@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -40,8 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,35 +49,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.katalog.data.EventModel
-import com.managevent.app.features.wishlist.viewmodel.WishlistViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
 fun WishlistScreen(
+    wishlistState: UiState<List<EventModel>>,
+    selectedCategory: String,
+    totalCount: Int,
+    categories: List<String>,
     modifier: Modifier = Modifier,
-    viewModel: WishlistViewModel = viewModel(),
-    onEventClick: (String) -> Unit = {}
+    onCategorySelect: (String) -> Unit = {},
+    onEventClick: (String) -> Unit = {},
+    onFavoriteToggle: (String) -> Unit = {}
 ) {
-    val wishlistState by viewModel.wishlistState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        viewModel.fetchWishlist()
-    }
-
     WishlistContent(
         wishlistState = wishlistState,
-        selectedCategory = viewModel.selectedCategory,
-        categories = viewModel.categories,
-        onCategorySelect = viewModel::onCategorySelected,
+        selectedCategory = selectedCategory,
+        totalCount = totalCount,
+        categories = categories,
+        onCategorySelect = onCategorySelect,
         onEventClick = onEventClick,
-        onFavoriteToggle = { eventId -> viewModel.removeFromWishlist(eventId) },
+        onFavoriteToggle = onFavoriteToggle,
         modifier = modifier
     )
 }
@@ -90,6 +84,7 @@ fun WishlistScreen(
 fun WishlistContent(
     wishlistState: UiState<List<EventModel>>,
     selectedCategory: String,
+    totalCount: Int,
     categories: List<String>,
     onCategorySelect: (String) -> Unit,
     onEventClick: (String) -> Unit,
@@ -156,7 +151,6 @@ fun WishlistContent(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Header Row (Favorit Saya + Count Badge + Filter Button)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,13 +171,12 @@ fun WishlistContent(
                         )
                     )
 
-                    val count = if (wishlistState is UiState.Success) wishlistState.data.size else 6
                     Surface(
                         color = Color(0xFFE2DFFF),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "$count Acara",
+                            text = "$totalCount Acara",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = Color(0xFF3525CD),
                                 fontWeight = FontWeight.Bold
@@ -220,17 +213,13 @@ fun WishlistContent(
                 }
             }
 
-            // Category Filter Chips (LazyRow)
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 items(categories, key = { it }) { category ->
                     val isSelected = selectedCategory == category
-                    val labelText = if (category == "Semua") {
-                        val count = if (wishlistState is UiState.Success) wishlistState.data.size else 6
-                        "Semua ($count)"
-                    } else category
+                    val labelText = if (category == "Semua") "Semua ($totalCount)" else category
 
                     FilterChip(
                         selected = isSelected,
@@ -255,7 +244,6 @@ fun WishlistContent(
                 }
             }
 
-            // Wishlist Grid View (LazyVerticalGrid 2 Columns)
             when (wishlistState) {
                 is UiState.Loading -> {
                     Box(
@@ -291,7 +279,7 @@ fun WishlistContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Belum ada event di favorit Anda.",
+                                text = "Tidak ada event favorit di kategori '$selectedCategory'.",
                                 style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
                             )
                         }
@@ -342,7 +330,6 @@ fun WishlistEventCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            // Image Box with Overlays
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -355,7 +342,6 @@ fun WishlistEventCard(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Category Pill Top-Left
                 Surface(
                     color = Color.White.copy(alpha = 0.9f),
                     shape = RoundedCornerShape(12.dp),
@@ -374,7 +360,6 @@ fun WishlistEventCard(
                     )
                 }
 
-                // Heart Favorite Button Top-Right
                 Box(
                     modifier = Modifier
                         .padding(8.dp)
@@ -394,12 +379,10 @@ fun WishlistEventCard(
                 }
             }
 
-            // Card Body Info
             Column(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Date Text
                 Text(
                     text = event.date,
                     style = MaterialTheme.typography.labelSmall.copy(
@@ -409,7 +392,6 @@ fun WishlistEventCard(
                     )
                 )
 
-                // Title
                 Text(
                     text = event.title,
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -422,7 +404,6 @@ fun WishlistEventCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Location
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -446,7 +427,6 @@ fun WishlistEventCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Price
                 Text(
                     text = formattedPrice,
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -470,24 +450,16 @@ fun WishlistContentPreview() {
                     EventModel(
                         id = "1",
                         title = "Nusantara Symphony Fest",
-                        category = "Konser",
+                        category = "Konser Musik",
                         date = "14 Mei 2026",
                         location = "GBK, Jakarta",
                         price = 250000.0,
-                        isFavorite = true
-                    ),
-                    EventModel(
-                        id = "2",
-                        title = "Gelaran Nikah Adat Nusantara",
-                        category = "Pernikahan",
-                        date = "22 Agu 2026",
-                        location = "JCC Senayan",
-                        price = 75000.0,
                         isFavorite = true
                     )
                 )
             ),
             selectedCategory = "Semua",
+            totalCount = 6,
             categories = listOf("Semua", "Konser Musik", "Pernikahan", "Festival", "Pameran"),
             onCategorySelect = {},
             onEventClick = {},

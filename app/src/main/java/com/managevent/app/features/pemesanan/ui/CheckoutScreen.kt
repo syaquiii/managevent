@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +48,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
@@ -66,8 +63,6 @@ import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.theme.SurfaceContainerHighest
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.katalog.data.EventModel
-import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
-import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -75,28 +70,15 @@ private const val MAX_TICKETS_PER_ORDER = 10
 
 @Composable
 fun CheckoutScreen(
-    modifier: Modifier = Modifier,
-    viewModel: PemesananViewModel = viewModel(),
-    katalogViewModel: KatalogViewModel = viewModel(),
     eventId: String,
+    eventState: UiState<EventModel>,
+    checkoutState: UiState<String>,
+    modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
-    onSuccessSubmit: () -> Unit = {}
+    onSubmitCheckout: (Int, String, EventModel) -> Unit = { _, _, _ -> }
 ) {
-    val checkoutState by viewModel.checkoutState.collectAsStateWithLifecycle()
-    val eventState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
     var jumlahTiket by rememberSaveable(eventId) { mutableIntStateOf(1) }
     var catatan by rememberSaveable(eventId) { mutableStateOf("") }
-
-    LaunchedEffect(eventId) {
-        katalogViewModel.fetchEventById(eventId)
-    }
-
-    LaunchedEffect(checkoutState) {
-        if (checkoutState is UiState.Success) {
-            viewModel.consumeCheckoutSuccess()
-            onSuccessSubmit()
-        }
-    }
 
     CheckoutContent(
         eventState = eventState,
@@ -109,15 +91,7 @@ fun CheckoutScreen(
         onNotesChange = { catatan = it.take(500) },
         onConfirmOrder = {
             val event = (eventState as? UiState.Success)?.data ?: return@CheckoutContent
-            viewModel.submitCheckout(
-                eventId = event.id,
-                jumlahTiket = jumlahTiket,
-                catatan = catatan,
-                pricePerTicket = event.price,
-                eventTitle = event.title,
-                eventDate = event.date,
-                eventImageUrl = event.imageUrl
-            )
+            onSubmitCheckout(jumlahTiket, catatan, event)
         },
         modifier = modifier
     )

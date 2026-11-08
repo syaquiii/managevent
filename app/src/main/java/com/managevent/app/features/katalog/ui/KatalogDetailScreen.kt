@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,7 +30,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,8 +39,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,41 +48,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.managevent.app.core.components.LoadingScreen
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.katalog.data.EventModel
-import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun KatalogDetailScreen(
-    eventId: String,
+    detailState: UiState<EventModel>,
     modifier: Modifier = Modifier,
-    viewModel: KatalogViewModel = viewModel(),
     onBackClick: () -> Unit = {},
+    onFavoriteToggle: () -> Unit = {},
     onBookClick: (String) -> Unit = {},
     onReviewClick: (String) -> Unit = {}
 ) {
-    val detailState by viewModel.eventDetailState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(eventId) {
-        if (eventId.isNotBlank()) {
-            viewModel.fetchEventById(eventId)
-        }
-    }
-
     KatalogDetailContent(
         detailState = detailState,
         onBackClick = onBackClick,
-        onFavoriteToggle = {
-            viewModel.toggleFavorite(eventId)
-            viewModel.fetchEventById(eventId)
-        },
+        onFavoriteToggle = onFavoriteToggle,
         onBookClick = onBookClick,
         onReviewClick = onReviewClick,
         modifier = modifier
@@ -131,12 +111,6 @@ fun KatalogDetailContent(
         bottomBar = {
             if (detailState is UiState.Success) {
                 val event = detailState.data
-                val formattedPrice = try {
-                    val formatter = NumberFormat.getInstance(Locale.forLanguageTag("id-ID"))
-                    "Rp " + formatter.format(event.price.toLong())
-                } catch (_: Exception) {
-                    "Rp ${event.price.toLong()}"
-                }
 
                 Surface(
                     color = Color.White,
@@ -149,7 +123,6 @@ fun KatalogDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Wishlist Heart Icon Button
                         IconButton(
                             onClick = onFavoriteToggle,
                             modifier = Modifier
@@ -214,7 +187,6 @@ fun KatalogDetailContent(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Poster Image Header
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -227,7 +199,6 @@ fun KatalogDetailContent(
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            // Status Pill
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -245,7 +216,6 @@ fun KatalogDetailContent(
                                 )
                             }
 
-                            // Category Pill Overlay
                             if (event.category.isNotBlank()) {
                                 Box(
                                     modifier = Modifier
@@ -267,7 +237,6 @@ fun KatalogDetailContent(
                             }
                         }
 
-                        // Event Title & Rating Section
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -283,7 +252,6 @@ fun KatalogDetailContent(
                                 )
                             )
 
-                            // Rating Row -> Clickable to navigate to UlasanListScreen!
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -319,7 +287,6 @@ fun KatalogDetailContent(
                                 )
                             }
 
-                            // Event Info Card (Date & Location)
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
@@ -379,7 +346,6 @@ fun KatalogDetailContent(
                                 }
                             }
 
-                            // Description Section
                             Text(
                                 text = "Deskripsi Event",
                                 style = MaterialTheme.typography.titleMedium.copy(
@@ -389,35 +355,12 @@ fun KatalogDetailContent(
                             )
 
                             Text(
-                                text = if (event.description.isNotBlank()) event.description else "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi mulai dari dekorasi, katering, tata rias, busana pengantin, hingga dokumentasi foto dan video profesional.",
+                                text = if (event.description.isNotBlank()) event.description else "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi.",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = Color(0xFF464555),
                                     lineHeight = 22.sp
                                 )
                             )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Features Badges Section
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Card(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF3525CD), modifier = Modifier.size(18.dp))
-                                        Text("200+ Vendor Resmi", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -436,10 +379,10 @@ fun KatalogDetailContentPreview() {
                 EventModel(
                     id = "evt-1",
                     title = "Pameran Pernikahan Nusantara 2026",
-                    description = "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi.",
+                    description = "Pameran vendor pernikahan terlengkap di Indonesia.",
                     category = "Pernikahan",
                     date = "18 - 20 Juli 2026",
-                    location = "Jakarta Convention Center (JCC), Senayan, Jakarta Pusat",
+                    location = "Jakarta Convention Center (JCC)",
                     price = 150000.0,
                     imageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800",
                     isFavorite = true
