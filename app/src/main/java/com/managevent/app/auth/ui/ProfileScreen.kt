@@ -22,11 +22,13 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.outlined.ConfirmationNumber
+import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -86,7 +88,7 @@ fun ProfileContent(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Avatar Image with Edit Badge
+            // Avatar Container with Clean Vector Icon
             Box(
                 modifier = Modifier.size(96.dp),
                 contentAlignment = Alignment.BottomEnd
@@ -98,7 +100,12 @@ fun ProfileContent(
                         .background(Color(0xFFE2DFFF)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "👤", fontSize = 42.sp)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Foto Profil",
+                        tint = Color(0xFF3525CD),
+                        modifier = Modifier.size(48.dp)
+                    )
                 }
 
                 // Edit Camera Icon Overlay
@@ -136,21 +143,32 @@ fun ProfileContent(
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Role Badge Pill
+            // Clean Role Badge Pill with Vector Icon
             Surface(
                 color = Color(0xFFE2DFFF),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    text = if (user.role == "VENDOR") "🎪 VENDOR / EO" else "🎫 PEMESAN TIKET",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color(0xFF3525CD),
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = if (user.role == "VENDOR") Icons.Outlined.Storefront else Icons.Outlined.ConfirmationNumber,
+                        contentDescription = null,
+                        tint = Color(0xFF3525CD),
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = if (user.role == "VENDOR") "VENDOR / EO" else "PEMESAN TIKET",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFF3525CD),
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -190,7 +208,7 @@ fun ProfileContent(
 
             // Logout Button
             AppButton(
-                text = "Keluar dari Akun (Logout)",
+                text = "Keluar dari Akun",
                 onClick = onLogoutClick,
                 variant = AppButtonVariant.SECONDARY_OUTLINED
             )

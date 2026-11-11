@@ -10,6 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
+import com.managevent.app.auth.data.UserModel
 import com.managevent.app.auth.ui.LoginScreen
 import com.managevent.app.auth.ui.OnboardingScreen
 import com.managevent.app.auth.ui.ProfileScreen
@@ -20,7 +21,6 @@ import com.managevent.app.features.agenda.ui.AgendaFormScreen
 import com.managevent.app.features.agenda.ui.AgendaListScreen
 import com.managevent.app.features.agenda.ui.BookedEventListScreen
 import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
-import com.managevent.app.features.katalog.data.EventModel
 import com.managevent.app.features.katalog.ui.KatalogDetailScreen
 import com.managevent.app.features.katalog.ui.KatalogFormScreen
 import com.managevent.app.features.katalog.ui.KatalogListScreen
@@ -42,6 +42,10 @@ fun AppNavHost(
     modifier: Modifier = Modifier,
     startDestination: String = Screen.Onboarding.route
 ) {
+    val authViewModel: AuthViewModel = viewModel()
+    val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
+    val loginState by authViewModel.loginState.collectAsStateWithLifecycle()
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -56,34 +60,53 @@ fun AppNavHost(
             )
         }
         composable(Screen.Login.route) {
-            val authViewModel: AuthViewModel = viewModel()
             LoginScreen(
+                loginState = loginState,
                 onLoginClick = { email, password ->
-                    authViewModel.login(email, password)
-                    navController.navigate(Screen.KatalogList.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
-                    }
+                    authViewModel.login(
+                        email = email,
+                        pass = password,
+                        onSuccess = {
+                            navController.navigate(Screen.KatalogList.route) {
+                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            }
+                        }
+                    )
                 },
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) }
             )
         }
         composable(Screen.Register.route) {
-            val authViewModel: AuthViewModel = viewModel()
             RegisterScreen(
+                registerState = loginState,
                 onRegisterClick = { email, password, fullName, role ->
-                    authViewModel.register(email, password, fullName, role)
-                    navController.navigate(Screen.KatalogList.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
-                    }
+                    authViewModel.register(
+                        email = email,
+                        pass = password,
+                        fullName = fullName,
+                        role = role,
+                        onSuccess = {
+                            navController.navigate(Screen.KatalogList.route) {
+                                popUpTo(Screen.Onboarding.route) { inclusive = true }
+                            }
+                        }
+                    )
                 },
                 onNavigateToLogin = { navController.popBackStack() }
             )
         }
         composable(Screen.Profile.route) {
             ProfileScreen(
+                user = currentUser ?: UserModel(
+                    email = "user@managevent.com",
+                    fullName = "Pengguna Managevent",
+                    role = "PEMESAN"
+                ),
                 onLogoutClick = {
-                    navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(0) { inclusive = true }
+                    authViewModel.logout {
+                        navController.navigate(Screen.Onboarding.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -100,6 +123,7 @@ fun AppNavHost(
                 eventsState = eventsState,
                 searchQuery = searchQuery,
                 selectedCategory = selectedCategory,
+                userRole = currentUser?.role ?: "PEMESAN",
                 onEventClick = { eventId -> navController.navigate(Screen.KatalogDetail.createRoute(eventId)) },
                 onFavoriteToggle = katalogViewModel::toggleFavorite,
                 onSearchQueryChange = katalogViewModel::onSearchQueryChange,
@@ -256,8 +280,8 @@ fun AppNavHost(
                 onSubmit = {
                     ulasanViewModel.submitUlasan(
                         eventId = eventId,
-                        userId = "dummy-user-id",
-                        username = "User Uji",
+                        userId = currentUser?.id ?: "dummy-user-id",
+                        username = currentUser?.fullName ?: "User Uji",
                         onSuccess = { navController.popBackStack() }
                     )
                 }
