@@ -6,9 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.managevent.app.core.components.AppBottomBar
@@ -22,39 +25,50 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ManageventTheme {
-                val navController = rememberNavController()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-
-                // Sembunyikan BottomBar pada layar form input / checkout
-                val showBottomBar = currentRoute != Screen.AgendaForm.route &&
-                        currentRoute != Screen.KatalogForm.route &&
-                        currentRoute != Screen.UlasanForm.route &&
-                        currentRoute != Screen.Checkout.route
-
-                Scaffold(
+                Surface(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
-                        if (showBottomBar) {
-                            AppBottomBar(
-                                currentRoute = currentRoute,
-                                onNavigate = { route ->
-                                    navController.navigate(route) {
-                                        popUpTo(navController.graph.startDestinationId) {
-                                            saveState = true
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
+
+                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form / Ulasan
+                    val showBottomBar = (currentRoute != Screen.Onboarding.route) &&
+                            (currentRoute != Screen.Login.route) &&
+                            (currentRoute != Screen.Register.route) &&
+                            (currentRoute != Screen.AgendaForm.route) &&
+                            (currentRoute != Screen.KatalogForm.route) &&
+                            (currentRoute != Screen.UlasanForm.route) &&
+                            (currentRoute != Screen.UlasanList.route) && // <-- TAMBAHAN
+                            (currentRoute != Screen.Checkout.route)
+
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        containerColor = MaterialTheme.colorScheme.background,
+                        bottomBar = {
+                            if (showBottomBar) {
+                                AppBottomBar(
+                                    currentRoute = currentRoute,
+                                    onNavigate = { route ->
+                                        navController.navigate(route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
+                    ) { innerPadding ->
+                        AppNavHost(
+                            navController = navController,
+                            startDestination = Screen.KatalogList.route,
+                            modifier = Modifier.padding(innerPadding)
+                        )
                     }
-                ) { innerPadding ->
-                    AppNavHost(
-                        navController = navController,
-                        modifier = Modifier.padding(innerPadding)
-                    )
                 }
             }
         }

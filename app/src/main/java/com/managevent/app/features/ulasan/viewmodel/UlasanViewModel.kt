@@ -21,45 +21,38 @@ class UlasanViewModel(
     private val _ulasanState = MutableStateFlow<UiState<List<UlasanModel>>>(UiState.Idle)
     val ulasanState: StateFlow<UiState<List<UlasanModel>>> = _ulasanState.asStateFlow()
 
-    // State untuk Filter (0 = Semua, 1-5 = Bintang)
     var selectedRatingFilter by mutableIntStateOf(0)
         private set
 
-    // State untuk Form Input
     var ratingInput by mutableIntStateOf(5)
         private set
     var commentInput by mutableStateOf("")
         private set
 
-    // List asli sebelum difilter
+    var editingUlasanId by mutableStateOf<String?>(null)
+        private set
+
     private var allUlasan: List<UlasanModel> = emptyList()
+    private var isDummyLoaded = false // <-- Penanda biar data nggak ke-reset
 
     fun fetchUlasan(eventId: String) {
         viewModelScope.launch {
+            if (isDummyLoaded) {
+                applyFilter()
+                return@launch
+            }
+
             _ulasanState.value = UiState.Loading
 
-            // --- DATA DUMMY UNTUK DEMO FE ---
+            // --- DATA DUMMY AWAL ---
             kotlinx.coroutines.delay(500)
             allUlasan = listOf(
-                UlasanModel(
-                    id = "1",
-                    username = "Sarah Wijaya",
-                    rating = 5,
-                    comment = "Pengalaman pertama kali hadir di festival musik ini dan luar biasa rapi. Manajemen antrean toilet dan tempat ibadah dipersiapkan dengan baik. Pasti akan beli tiket lagi tahun depan!"
-                ),
-                UlasanModel(
-                    id = "2",
-                    username = "Budi Pratama",
-                    rating = 4,
-                    comment = "Bintang tamu dan visual panggung spektakuler! Sedikit masukan untuk pendingin udara di area VIP lounge yang sempat kurang dingin pada siang hari, namun selebihnya koordinasi kru sangat responsif."
-                ),
-                UlasanModel(
-                    id = "3",
-                    username = "Maya Kusuma",
-                    rating = 5,
-                    comment = "Pemberitahuan rundown di aplikasi sangat membantu, tidak ketinggalan sesi workshop utama. Kru lapangan ramah dan sigap memandu pengunjung!"
-                )
+                UlasanModel(id = "1", userId = "dummy-user-id", username = "Kamu (Rayhan)", rating = 5, comment = "Acara sangat bagus! Saya sangat puas."),
+                UlasanModel(id = "2", userId = "user-lain", username = "Sarah Wijaya", rating = 4, comment = "Secara keseluruhan oke, tapi antrean agak lama."),
+                UlasanModel(id = "3", userId = "user-lain", username = "Budi Pratama", rating = 5, comment = "Visual panggung spektakuler!")
             )
+
+            isDummyLoaded = true
             applyFilter()
         }
     }
@@ -70,12 +63,20 @@ class UlasanViewModel(
     }
 
     private fun applyFilter() {
-        val filtered = if (selectedRatingFilter == 0) {
-            allUlasan
-        } else {
-            allUlasan.filter { it.rating == selectedRatingFilter }
-        }
+        val filtered = if (selectedRatingFilter == 0) allUlasan else allUlasan.filter { it.rating == selectedRatingFilter }
         _ulasanState.value = UiState.Success(filtered)
+    }
+
+    fun startEdit(ulasan: UlasanModel) {
+        editingUlasanId = ulasan.id
+        ratingInput = ulasan.rating
+        commentInput = ulasan.comment
+    }
+
+    fun resetForm() {
+        editingUlasanId = null
+        ratingInput = 5
+        commentInput = ""
     }
 
     fun onRatingChange(newRating: Int) { ratingInput = newRating }
@@ -83,30 +84,32 @@ class UlasanViewModel(
 
     fun submitUlasan(eventId: String, userId: String, username: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            // Simulasi loading sebentar
-            kotlinx.coroutines.delay(1000)
+            kotlinx.coroutines.delay(500) // Simulasi loading bentar
 
-            // Bikin ulasan baru dari inputan form
-            val newUlasan = UlasanModel(
-                id = java.util.UUID.randomUUID().toString(),
-                eventId = eventId,
-                userId = userId,
-                username = "Kamu", // Nama dummy biar gampang dibedain
-                rating = ratingInput,
-                comment = commentInput
-            )
+            if (editingUlasanId != null) {
+                allUlasan = allUlasan.map {
+                    if (it.id == editingUlasanId) it.copy(rating = ratingInput, comment = commentInput) else it
+                }
+            } else {
+                val newUlasan = UlasanModel(
+                    id = java.util.UUID.randomUUID().toString(),
+                    eventId = eventId,
+                    userId = userId,
+                    username = username,
+                    rating = ratingInput,
+                    comment = commentInput
+                )
+                allUlasan = listOf(newUlasan) + allUlasan
+            }
 
-            // Masukkan ulasan baru ke urutan paling atas
-            allUlasan = listOf(newUlasan) + allUlasan
             applyFilter()
-
-            onSuccess() // Balik ke halaman list
+            resetForm()
+            onSuccess()
         }
     }
 
     fun deleteUlasan(ulasanId: String, eventId: String) {
         viewModelScope.launch {
-            // Simulasi hapus ulasan dari list
             allUlasan = allUlasan.filterNot { it.id == ulasanId }
             applyFilter()
         }

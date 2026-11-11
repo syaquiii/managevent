@@ -13,60 +13,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-<<<<<<< HEAD
-import androidx.lifecycle.viewmodel.compose.viewModel
-=======
-import com.managevent.app.core.components.AppTopBar
->>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
-import com.managevent.app.core.theme.ManageventTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UlasanFormScreen(
-<<<<<<< HEAD
-    eventId: String = "dummy-event-id",
-    userId: String = "dummy-user-id",
-    username: String = "User Uji",
-    onBackClick: () -> Unit, // <--- TAMBAHAN
-    onSuccessNavigateBack: () -> Unit = {},
-    viewModel: UlasanViewModel = viewModel()
-=======
     eventId: String,
+    isEditMode: Boolean,
     ratingInput: Int,
     commentInput: String,
-    modifier: Modifier = Modifier,
-    onRatingChange: (Int) -> Unit = {},
-    onCommentChange: (String) -> Unit = {},
-    onSubmit: () -> Unit = {}
-) {
-    UlasanFormContent(
-        eventId = eventId,
-        ratingInput = ratingInput,
-        onRatingChange = onRatingChange,
-        commentInput = commentInput,
-        onCommentChange = onCommentChange,
-        onSubmit = onSubmit,
-        modifier = modifier
-    )
-}
-
-@Composable
-fun UlasanFormContent(
-    eventId: String,
-    ratingInput: Int,
     onRatingChange: (Int) -> Unit,
-    commentInput: String,
     onCommentChange: (String) -> Unit,
     onSubmit: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
->>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
 ) {
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Beri Ulasan", fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEditMode) "Edit Ulasan" else "Beri Ulasan", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -84,7 +50,7 @@ fun UlasanFormContent(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text(text = "Beri Ulasan untuk Event ID: $eventId", color = Color(0xFF181445), fontWeight = FontWeight.Bold)
+            Text(text = "Event ID: $eventId", color = Color(0xFF181445), fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(text = "Seberapa puas kamu?", style = MaterialTheme.typography.bodyLarge, color = GrayTextColor)
@@ -94,10 +60,8 @@ fun UlasanFormContent(
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Bintang $starValue",
-                        tint = if (starValue <= viewModel.ratingInput) CoralColor else Color.LightGray,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clickable { viewModel.onRatingChange(starValue) }
+                        tint = if (starValue <= ratingInput) CoralColor else Color.LightGray,
+                        modifier = Modifier.size(48.dp).clickable { onRatingChange(starValue) }
                     )
                 }
             }
@@ -105,8 +69,8 @@ fun UlasanFormContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(
-                value = viewModel.commentInput,
-                onValueChange = { viewModel.onCommentChange(it) },
+                value = commentInput,
+                onValueChange = onCommentChange,
                 label = { Text("Tuliskan pengalamanmu...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
@@ -122,19 +86,12 @@ fun UlasanFormContent(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = {
-                    viewModel.submitUlasan(
-                        eventId = eventId,
-                        userId = userId,
-                        username = username,
-                        onSuccess = { onSuccessNavigateBack() }
-                    )
-                },
+                onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = IndigoTextColor)
             ) {
-                Text("Kirim Ulasan", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(if (isEditMode) "Simpan Perubahan" else "Kirim Ulasan", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
