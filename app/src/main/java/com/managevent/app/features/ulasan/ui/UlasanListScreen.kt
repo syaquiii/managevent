@@ -19,9 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.ulasan.data.UlasanModel
 
@@ -117,12 +115,7 @@ fun UlasanListScreen(
 }
 
 @Composable
-fun UlasanItemCard(
-    ulasan: UlasanModel,
-    isOwner: Boolean,
-    onDeleteClick: (String) -> Unit,
-    onEditClick: (UlasanModel) -> Unit
-) {
+fun UlasanItemCard(ulasan: UlasanModel, isOwner: Boolean, onDeleteClick: (String) -> Unit, onEditClick: (UlasanModel) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),

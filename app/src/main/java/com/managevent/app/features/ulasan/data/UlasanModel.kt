@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class UlasanModel(
     val id: String = "",
     @SerialName("event_id") val eventId: String = "",
-    @SerialName("user_id") val userId: String = "",
+    @SerialName("user_id") val userId: String? = null, // Pakai ? agar tidak error jika null
     val username: String = "",
     val rating: Int = 5,
     val comment: String = "",

@@ -199,7 +199,7 @@ fun AppNavHost(
 
         // Feature 3: Ulasan (Rayhan Wira Pamungkas)
         composable(Screen.UlasanList.route) { backStackEntry ->
-            val eventId = backStackEntry.arguments?.getString("eventId") ?: "dummy-event-id"
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
             val ulasanViewModel: UlasanViewModel = viewModel()
             val uiState by ulasanViewModel.ulasanState.collectAsStateWithLifecycle()
 
@@ -208,7 +208,7 @@ fun AppNavHost(
             UlasanListScreen(
                 uiState = uiState,
                 selectedFilter = ulasanViewModel.selectedRatingFilter,
-                currentUserId = currentUser?.id ?: "dummy-user-id",
+                currentUserId = currentUser?.id ?: "",
                 onFilterClick = ulasanViewModel::onFilterChanged,
                 onDeleteClick = { id -> ulasanViewModel.deleteUlasan(id, eventId) },
                 onEditClick = { ulasan ->
@@ -225,7 +225,6 @@ fun AppNavHost(
         composable(Screen.UlasanForm.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
 
-            // INI KUNCI PERUBAHANNYA: Nebeng ViewModel dari UlasanList
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry(Screen.UlasanList.route)
             }
@@ -239,12 +238,22 @@ fun AppNavHost(
                 onRatingChange = ulasanViewModel::onRatingChange,
                 onCommentChange = ulasanViewModel::onCommentChange,
                 onSubmit = {
-                    ulasanViewModel.submitUlasan(
-                        eventId = eventId,
-                        userId = currentUser?.id ?: "dummy-user-id",
-                        username = currentUser?.fullName ?: "Kamu (Rayhan)",
-                        onSuccess = { navController.popBackStack() }
-                    )
+                    if (currentUser == null) {
+                        Toast.makeText(context, "Harap Login Dulu!", Toast.LENGTH_LONG).show()
+                    } else {
+                        ulasanViewModel.submitUlasan(
+                            eventId = eventId,
+                            userId = currentUser!!.id,
+                            username = currentUser?.fullName ?: "User",
+                            onSuccess = {
+                                Toast.makeText(context, "Ulasan Berhasil!", Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, "Gagal: $error", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    }
                 },
                 onBackClick = { navController.popBackStack() }
             )

@@ -33,27 +33,20 @@ class UlasanViewModel(
         private set
 
     private var allUlasan: List<UlasanModel> = emptyList()
-    private var isDummyLoaded = false // <-- Penanda biar data nggak ke-reset
 
     fun fetchUlasan(eventId: String) {
         viewModelScope.launch {
-            if (isDummyLoaded) {
-                applyFilter()
-                return@launch
-            }
-
             _ulasanState.value = UiState.Loading
-
-            // --- DATA DUMMY AWAL ---
-            kotlinx.coroutines.delay(500)
-            allUlasan = listOf(
-                UlasanModel(id = "1", userId = "dummy-user-id", username = "Kamu (Rayhan)", rating = 5, comment = "Acara sangat bagus! Saya sangat puas."),
-                UlasanModel(id = "2", userId = "user-lain", username = "Sarah Wijaya", rating = 4, comment = "Secara keseluruhan oke, tapi antrean agak lama."),
-                UlasanModel(id = "3", userId = "user-lain", username = "Budi Pratama", rating = 5, comment = "Visual panggung spektakuler!")
-            )
-
-            isDummyLoaded = true
-            applyFilter()
+            when (val result = repository.getUlasanByEvent(eventId)) {
+                is UiState.Success -> {
+                    allUlasan = result.data
+                    applyFilter()
+                }
+                is UiState.Error -> {
+                    _ulasanState.value = UiState.Error(result.message)
+                }
+                else -> {}
+            }
         }
     }
 
@@ -82,36 +75,53 @@ class UlasanViewModel(
     fun onRatingChange(newRating: Int) { ratingInput = newRating }
     fun onCommentChange(newComment: String) { commentInput = newComment }
 
-    fun submitUlasan(eventId: String, userId: String, username: String, onSuccess: () -> Unit) {
+    fun submitUlasan(
+        eventId: String,
+        userId: String,
+        username: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(500) // Simulasi loading bentar
+            _ulasanState.value = UiState.Loading
 
             if (editingUlasanId != null) {
-                allUlasan = allUlasan.map {
-                    if (it.id == editingUlasanId) it.copy(rating = ratingInput, comment = commentInput) else it
+                when (val result = repository.updateUlasan(editingUlasanId!!, commentInput, ratingInput)) {
+                    is UiState.Success -> {
+                        resetForm()
+                        fetchUlasan(eventId)
+                        onSuccess()
+                    }
+                    is UiState.Error -> {
+                        _ulasanState.value = UiState.Error(result.message)
+                        onError(result.message)
+                    }
+                    else -> {}
                 }
             } else {
-                val newUlasan = UlasanModel(
-                    id = java.util.UUID.randomUUID().toString(),
-                    eventId = eventId,
-                    userId = userId,
-                    username = username,
-                    rating = ratingInput,
-                    comment = commentInput
-                )
-                allUlasan = listOf(newUlasan) + allUlasan
+                when (val result = repository.addUlasan(eventId, userId, username, ratingInput, commentInput)) {
+                    is UiState.Success -> {
+                        resetForm()
+                        fetchUlasan(eventId)
+                        onSuccess()
+                    }
+                    is UiState.Error -> {
+                        _ulasanState.value = UiState.Error(result.message)
+                        onError(result.message)
+                    }
+                    else -> {}
+                }
             }
-
-            applyFilter()
-            resetForm()
-            onSuccess()
         }
     }
 
     fun deleteUlasan(ulasanId: String, eventId: String) {
         viewModelScope.launch {
-            allUlasan = allUlasan.filterNot { it.id == ulasanId }
-            applyFilter()
+            when (val result = repository.deleteUlasan(ulasanId)) {
+                is UiState.Success -> fetchUlasan(eventId)
+                is UiState.Error -> println("Gagal hapus: ${result.message}")
+                else -> {}
+            }
         }
     }
 }
