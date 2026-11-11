@@ -3,6 +3,7 @@ package com.managevent.app.core.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,7 +41,7 @@ import com.managevent.app.features.wishlist.viewmodel.WishlistViewModel
 fun AppNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = Screen.Onboarding.route
+    startDestination: String = Screen.KatalogList.route
 ) {
     NavHost(
         navController = navController,
@@ -291,8 +292,12 @@ fun AppNavHost(
         }
 
         // Feature 5: Agenda (Farrel Radya Putra)
-        composable(Screen.AgendaList.route) {
-            val agendaViewModel: AgendaViewModel = viewModel()
+        composable(Screen.AgendaList.route) { backStackEntry ->
+            val agendaViewModel: AgendaViewModel = viewModel(
+                viewModelStoreOwner = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.AgendaList.route)
+                }
+            )
             val bookedState by agendaViewModel.bookedState.collectAsStateWithLifecycle()
 
             LaunchedEffect(Unit) {
@@ -310,7 +315,10 @@ fun AppNavHost(
         }
         composable(Screen.AgendaDetailList.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            val agendaViewModel: AgendaViewModel = viewModel()
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.AgendaList.route)
+            }
+            val agendaViewModel: AgendaViewModel = viewModel(viewModelStoreOwner = parentEntry)
             val notesState by agendaViewModel.notesState.collectAsStateWithLifecycle()
 
             LaunchedEffect(eventId) {
@@ -319,6 +327,7 @@ fun AppNavHost(
 
             AgendaListScreen(
                 state = notesState,
+                bookedEvent = agendaViewModel.currentBookedEvent,
                 onBack = { navController.popBackStack() },
                 onAddNote = {
                     agendaViewModel.startAdd()
@@ -332,8 +341,11 @@ fun AppNavHost(
                 onDeleteNote = agendaViewModel::deleteNote
             )
         }
-        composable(Screen.AgendaForm.route) {
-            val agendaViewModel: AgendaViewModel = viewModel()
+        composable(Screen.AgendaForm.route) { backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.AgendaList.route)
+            }
+            val agendaViewModel: AgendaViewModel = viewModel(viewModelStoreOwner = parentEntry)
 
             AgendaFormScreen(
                 isEditMode = agendaViewModel.isEditMode,

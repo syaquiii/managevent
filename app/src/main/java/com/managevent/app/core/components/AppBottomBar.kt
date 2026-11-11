@@ -60,7 +60,7 @@ fun AppBottomBar(
             unselectedIcon = Icons.AutoMirrored.Outlined.ReceiptLong
         ),
         BottomNavItem(
-            title = "Catatan",
+            title = "Agenda",
             route = Screen.AgendaList.route,
             selectedIcon = Icons.Filled.CalendarMonth,
             unselectedIcon = Icons.Outlined.CalendarMonth

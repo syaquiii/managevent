@@ -38,10 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.managevent.app.core.components.AppTopBar
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
@@ -75,7 +77,7 @@ fun BookedEventListContent(
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { AppTopBar(title = "Catatan Persiapan") }
+        topBar = { AppTopBar(title = "Agenda Persiapan") }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -144,19 +146,30 @@ private fun BookedEventCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
+                if (!event.imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = event.imageUrl,
+                        contentDescription = event.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(12.dp))
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
 
                 Column(
@@ -236,7 +249,7 @@ private fun BookedEventCard(
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Text(
-                                    text = "${event.noteCount} Catatan",
+                                    text = "${event.noteCount} Agenda",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF3525CD)
@@ -265,7 +278,7 @@ private fun BookedEventCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Buka Catatan",
+                    text = "Buka Agenda",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
