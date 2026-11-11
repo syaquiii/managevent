@@ -19,12 +19,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,9 +38,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,15 +64,21 @@ import com.managevent.app.features.katalog.data.EventModel
 @Composable
 fun KatalogDetailScreen(
     detailState: UiState<EventModel>,
+    userRole: String = "",
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
+    onEditClick: (String) -> Unit = {},
+    onDeleteConfirm: (String) -> Unit = {},
     onFavoriteToggle: () -> Unit = {},
     onBookClick: (String) -> Unit = {},
     onReviewClick: (String) -> Unit = {}
 ) {
     KatalogDetailContent(
         detailState = detailState,
+        userRole = userRole,
         onBackClick = onBackClick,
+        onEditClick = onEditClick,
+        onDeleteConfirm = onDeleteConfirm,
         onFavoriteToggle = onFavoriteToggle,
         onBookClick = onBookClick,
         onReviewClick = onReviewClick,
@@ -77,12 +90,39 @@ fun KatalogDetailScreen(
 @Composable
 fun KatalogDetailContent(
     detailState: UiState<EventModel>,
+    userRole: String,
     onBackClick: () -> Unit,
+    onEditClick: (String) -> Unit,
+    onDeleteConfirm: (String) -> Unit,
     onFavoriteToggle: () -> Unit,
     onBookClick: (String) -> Unit,
     onReviewClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog && detailState is UiState.Success) {
+        val event = detailState.data
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(text = "Hapus Event") },
+            text = { Text(text = "Apakah Anda yakin ingin menghapus event '${event.title}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDeleteConfirm(event.id)
+                }) {
+                    Text(text = "Hapus", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(text = "Batal")
+                }
+            }
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFFFAFBFD),
@@ -103,6 +143,24 @@ fun KatalogDetailContent(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali"
                         )
+                    }
+                },
+                actions = {
+                    if (userRole == "VENDOR" && detailState is UiState.Success) {
+                        val event = detailState.data
+                        IconButton(onClick = { onEditClick(event.id) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Event"
+                            )
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Hapus Event",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -388,7 +446,10 @@ fun KatalogDetailContentPreview() {
                     isFavorite = true
                 )
             ),
+            userRole = "VENDOR",
             onBackClick = {},
+            onEditClick = {},
+            onDeleteConfirm = {},
             onFavoriteToggle = {},
             onBookClick = {},
             onReviewClick = {}

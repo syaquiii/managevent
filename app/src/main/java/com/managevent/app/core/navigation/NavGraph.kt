@@ -46,6 +46,7 @@ fun AppNavHost(
     startDestination: String = Screen.KatalogList.route
 ) {
     val authViewModel: AuthViewModel = viewModel()
+    val katalogViewModel: KatalogViewModel = viewModel() // Shared ViewModel for Catalog State
     val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
     val loginState by authViewModel.loginState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -144,7 +145,6 @@ fun AppNavHost(
 
         // Feature 1: Katalog (Muhammad Abdul Fatah)
         composable(Screen.KatalogList.route) {
-            val katalogViewModel: KatalogViewModel = viewModel()
             val eventsState by katalogViewModel.eventsState.collectAsStateWithLifecycle()
             val searchQuery by katalogViewModel.searchQuery.collectAsStateWithLifecycle()
             val selectedCategory by katalogViewModel.selectedCategory.collectAsStateWithLifecycle()
@@ -171,7 +171,7 @@ fun AppNavHost(
         }
         composable(Screen.KatalogDetail.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            val katalogViewModel: KatalogViewModel = viewModel()
+            // FIXED: Do not create a new ViewModel instance here. Reuse the hoisted katalogViewModel from NavGraph scope!
             val detailState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
 
             LaunchedEffect(eventId) {
@@ -182,7 +182,16 @@ fun AppNavHost(
 
             KatalogDetailScreen(
                 detailState = detailState,
+                userRole = currentUser?.role ?: "PEMESAN",
                 onBackClick = { navController.popBackStack() },
+                onEditClick = { id -> 
+                    navController.navigate(Screen.KatalogForm.createRoute(id)) 
+                },
+                onDeleteConfirm = { id ->
+                    katalogViewModel.deleteEvent(id) {
+                        navController.popBackStack()
+                    }
+                },
                 onFavoriteToggle = {
                     katalogViewModel.toggleFavorite(eventId, currentUser?.id.orEmpty()) { msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
@@ -193,13 +202,33 @@ fun AppNavHost(
                 onReviewClick = { id -> navController.navigate(Screen.UlasanList.createRoute(id)) }
             )
         }
-        composable(Screen.KatalogForm.route) {
-            val katalogViewModel: KatalogViewModel = viewModel()
+        composable(
+            route = Screen.KatalogForm.route,
+            arguments = listOf(androidx.navigation.navArgument("eventId") { 
+                type = androidx.navigation.NavType.StringType; nullable = true 
+            })
+        ) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId")
+            val initialEvent = eventId?.let { id ->
+                val state = katalogViewModel.eventDetailState.value
+                if (state is UiState.Success && state.data.id == id) state.data else null
+            }
+            
             KatalogFormScreen(
+                initialEvent = initialEvent,
                 onBackClick = { navController.popBackStack() },
-                onSuccessSubmit = {
-                    katalogViewModel.fetchEvents(currentUser?.id.orEmpty())
-                    navController.popBackStack()
+                onSubmitEvent = { newEvent ->
+                    if (newEvent.id.isNotBlank() && initialEvent != null) {
+                        katalogViewModel.updateEvent(newEvent.id, newEvent) {
+                            katalogViewModel.fetchEvents(currentUser?.id.orEmpty())
+                            navController.popBackStack()
+                        }
+                    } else {
+                        katalogViewModel.addEvent(newEvent) {
+                            katalogViewModel.fetchEvents(currentUser?.id.orEmpty())
+                            navController.popBackStack()
+                        }
+                    }
                 }
             )
         }
@@ -208,7 +237,6 @@ fun AppNavHost(
         composable(Screen.Checkout.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId").orEmpty()
             val pemesananViewModel: PemesananViewModel = viewModel()
-            val katalogViewModel: KatalogViewModel = viewModel()
 
             val checkoutState by pemesananViewModel.checkoutState.collectAsStateWithLifecycle()
             val eventState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
@@ -349,6 +377,7 @@ fun AppNavHost(
                 onFavoriteToggle = { eventId ->
                     wishlistViewModel.removeFromWishlist(eventId, currentUser?.id.orEmpty()) { msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        katalogViewModel.syncFavoriteStateLocally(eventId, false) // ⬅️ Sinkronisasi Otomatis ke Halaman Beranda!
                     }
                 }
             )
