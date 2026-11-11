@@ -13,8 +13,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,15 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+<<<<<<< HEAD
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+=======
+import com.managevent.app.core.components.AppTopBar
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.ulasan.data.UlasanModel
-import com.managevent.app.features.ulasan.viewmodel.UlasanViewModel
 
-// Warna kustom sesuai DESIGN.md
 val CoralColor = Color(0xFFFC6955)
 val LilacActiveColor = Color(0xFFE2DFFF)
 val IndigoTextColor = Color(0xFF3525CD)
@@ -40,24 +40,35 @@ val BackgroundColor = Color(0xFFFCF8FF)
 
 @Composable
 fun UlasanListScreen(
+<<<<<<< HEAD
     eventId: String,
     onBackClick: () -> Unit, // <--- TAMBAHAN
     onAddUlasanClick: () -> Unit,
     viewModel: UlasanViewModel = viewModel()
+=======
+    uiState: UiState<List<UlasanModel>>,
+    selectedFilter: Int,
+    modifier: Modifier = Modifier,
+    onFilterClick: (Int) -> Unit = {},
+    onDeleteClick: (String) -> Unit = {},
+    onAddUlasanClick: () -> Unit = {}
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
 ) {
-    val uiState by viewModel.ulasanState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(eventId) {
-        viewModel.fetchUlasan(eventId)
-    }
-
     UlasanListContent(
         uiState = uiState,
+<<<<<<< HEAD
         selectedFilter = viewModel.selectedRatingFilter,
         onFilterClick = { viewModel.onFilterChanged(it) },
         onDeleteClick = { viewModel.deleteUlasan(it, eventId) },
         onAddUlasanClick = onAddUlasanClick,
         onBackClick = onBackClick // <--- LEMPAR KE CONTENT
+=======
+        selectedFilter = selectedFilter,
+        onFilterClick = onFilterClick,
+        onDeleteClick = onDeleteClick,
+        onAddUlasanClick = onAddUlasanClick,
+        modifier = modifier
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
     )
 }
 
@@ -228,4 +239,25 @@ fun UlasanItemCard(ulasan: UlasanModel, onDeleteClick: (String) -> Unit) {
             Text(ulasan.comment, color = Color(0xFF181445), style = MaterialTheme.typography.bodyMedium)
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+
+@Preview(showBackground = true)
+@Composable
+fun UlasanListContentPreview() {
+    ManageventTheme {
+        UlasanListContent(
+            uiState = UiState.Success(listOf(
+                UlasanModel(id = "1", username = "Sarah Wijaya", rating = 5, comment = "Pengalaman pertama kali hadir di festival musik ini dan luar biasa rapi."),
+                UlasanModel(id = "2", username = "Budi Pratama", rating = 4, comment = "Bintang tamu dan visual panggung spektakuler!")
+            )),
+            selectedFilter = 0,
+            onFilterClick = {},
+            onDeleteClick = {},
+            onAddUlasanClick = {}
+        )
+    }
+}
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36

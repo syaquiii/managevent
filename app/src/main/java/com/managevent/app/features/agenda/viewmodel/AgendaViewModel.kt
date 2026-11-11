@@ -42,11 +42,20 @@ class AgendaViewModel(
     var currentEventId: String? = null
         private set
 
+    var currentBookedEvent by mutableStateOf<BookedEventModel?>(null)
+        private set
+
     private val _message = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val message: SharedFlow<String> = _message.asSharedFlow()   // untuk Snackbar
 
     fun loadNotes(eventId: String) {
         currentEventId = eventId
+        viewModelScope.launch {
+            try {
+                val bookedList = repository.getBookedEvents()
+                currentBookedEvent = bookedList.firstOrNull { it.eventId == eventId }
+            } catch (_: Exception) {}
+        }
         launchLoading(_notesState) { repository.getNotes(eventId) }
     }
 
@@ -59,7 +68,7 @@ class AgendaViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _message.emit(e.localizedMessage ?: "Gagal memperbarui catatan")
+                _message.emit(e.localizedMessage ?: "Gagal memperbarui agenda")
             }
         }
     }
@@ -68,13 +77,13 @@ class AgendaViewModel(
         viewModelScope.launch {
             try {
                 repository.deleteNote(id)
-                _message.emit("Catatan dihapus")
+                _message.emit("Agenda dihapus")
                 reloadNotes()
                 onDone()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _message.emit(e.localizedMessage ?: "Gagal menghapus catatan")
+                _message.emit(e.localizedMessage ?: "Gagal menghapus agenda")
             }
         }
     }
@@ -147,13 +156,13 @@ class AgendaViewModel(
             isSaving = true
             try {
                 if (base == null) repository.addNote(note) else repository.updateNote(note)
-                _message.emit(if (base == null) "Catatan ditambahkan" else "Catatan diperbarui")
+                _message.emit(if (base == null) "Agenda ditambahkan" else "Agenda diperbarui")
                 reloadNotes()
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _message.emit(e.localizedMessage ?: "Gagal menyimpan catatan")
+                _message.emit(e.localizedMessage ?: "Gagal menyimpan agenda")
             } finally {
                 isSaving = false
             }

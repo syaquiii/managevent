@@ -15,19 +15,53 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+<<<<<<< HEAD
 import androidx.lifecycle.viewmodel.compose.viewModel
+=======
+import com.managevent.app.core.components.AppTopBar
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
 import com.managevent.app.core.theme.ManageventTheme
-import com.managevent.app.features.ulasan.viewmodel.UlasanViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UlasanFormScreen(
+<<<<<<< HEAD
     eventId: String = "dummy-event-id",
     userId: String = "dummy-user-id",
     username: String = "User Uji",
     onBackClick: () -> Unit, // <--- TAMBAHAN
     onSuccessNavigateBack: () -> Unit = {},
     viewModel: UlasanViewModel = viewModel()
+=======
+    eventId: String,
+    ratingInput: Int,
+    commentInput: String,
+    modifier: Modifier = Modifier,
+    onRatingChange: (Int) -> Unit = {},
+    onCommentChange: (String) -> Unit = {},
+    onSubmit: () -> Unit = {}
+) {
+    UlasanFormContent(
+        eventId = eventId,
+        ratingInput = ratingInput,
+        onRatingChange = onRatingChange,
+        commentInput = commentInput,
+        onCommentChange = onCommentChange,
+        onSubmit = onSubmit,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun UlasanFormContent(
+    eventId: String,
+    ratingInput: Int,
+    onRatingChange: (Int) -> Unit,
+    commentInput: String,
+    onCommentChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+>>>>>>> 67e190512689d30f7b103aee20752c9b1a85dd36
 ) {
     Scaffold(
         topBar = {

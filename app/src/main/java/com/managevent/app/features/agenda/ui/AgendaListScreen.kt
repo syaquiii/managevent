@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,55 +51,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.agenda.data.AgendaModel
-import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
+import com.managevent.app.features.agenda.data.BookedEventModel
 
-// ---------- Stateful ----------
 @Composable
 fun AgendaListScreen(
-    eventId: String = "",
+    state: UiState<List<AgendaModel>>,
     modifier: Modifier = Modifier,
-    viewModel: AgendaViewModel = viewModel(),
+    bookedEvent: BookedEventModel? = null,
     onBack: () -> Unit = {},
     onAddNote: () -> Unit = {},
-    onEditNote: (AgendaModel) -> Unit = {}
+    onEditNote: (AgendaModel) -> Unit = {},
+    onToggleDone: (AgendaModel) -> Unit = {},
+    onDeleteNote: (String) -> Unit = {}
 ) {
-    val state by viewModel.notesState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(eventId) { viewModel.loadNotes(eventId) }
-    LaunchedEffect(Unit) {
-        viewModel.message.collect { snackbarHostState.showSnackbar(it) }
-    }
 
     AgendaListContent(
         state = state,
+        bookedEvent = bookedEvent,
         snackbarHostState = snackbarHostState,
         onBack = onBack,
-        onAddNote = {
-            viewModel.startAdd()
-            onAddNote()
-        },
-        onEditNote = { note ->
-            viewModel.startEdit(note)
-            onEditNote(note)
-        },
-        onToggleDone = viewModel::toggleDone,
-        onDeleteNote = { id -> viewModel.deleteNote(id) },
+        onAddNote = onAddNote,
+        onEditNote = onEditNote,
+        onToggleDone = onToggleDone,
+        onDeleteNote = onDeleteNote,
         modifier = modifier
     )
 }
 
-// ---------- Stateless ----------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaListContent(
@@ -111,6 +98,7 @@ fun AgendaListContent(
     onToggleDone: (AgendaModel) -> Unit,
     onDeleteNote: (String) -> Unit,
     modifier: Modifier = Modifier,
+    bookedEvent: BookedEventModel? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     var noteToDelete by remember { mutableStateOf<AgendaModel?>(null) }
@@ -119,7 +107,7 @@ fun AgendaListContent(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Daftar Catatan") },
+                title = { Text("Daftar Agenda") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
@@ -131,7 +119,7 @@ fun AgendaListContent(
             ExtendedFloatingActionButton(
                 onClick = onAddNote,
                 icon = { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) },
-                text = { Text("Tambah Catatan", fontWeight = FontWeight.Bold) },
+                text = { Text("Tambah Agenda", fontWeight = FontWeight.Bold) },
                 containerColor = Color(0xFFFC6955),
                 contentColor = Color.White
             )
@@ -155,19 +143,22 @@ fun AgendaListContent(
                     )
                 }
                 is UiState.Success -> {
+                    val pendingNotes = state.data.filter { !it.isDone }
+                    val completedNotes = state.data.filter { it.isDone }
+
                     LazyColumn(
                         contentPadding = PaddingValues(
                             start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Event Context Header Card
                         item {
                             EventContextCard(
-                                title = "Pameran Pernikahan Nusantara 2026",
-                                date = "18 Juli 2026",
-                                location = "Grand Ballroom Jakarta",
-                                status = "Berjalan"
+                                title = bookedEvent?.title ?: "Pameran Pernikahan Nusantara 2026",
+                                date = bookedEvent?.date ?: "18 Juli 2026",
+                                location = bookedEvent?.location ?: "Grand Ballroom Jakarta",
+                                status = bookedEvent?.status ?: "Berjalan",
+                                imageUrl = bookedEvent?.imageUrl
                             )
                         }
 
@@ -176,13 +167,57 @@ fun AgendaListContent(
                                 EmptyNotesState(Modifier.padding(top = 32.dp))
                             }
                         } else {
-                            items(state.data, key = { it.id ?: it.title }) { note ->
-                                NoteCard(
-                                    note = note,
-                                    onToggleDone = { onToggleDone(note) },
-                                    onEdit = { onEditNote(note) },
-                                    onDelete = { noteToDelete = note }
-                                )
+                            // Section 1: Perlu Dikerjakan
+                            if (pendingNotes.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Perlu Dikerjakan (${pendingNotes.size})",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                    )
+                                }
+                                items(pendingNotes, key = { it.id ?: it.title }) { note ->
+                                    NoteCard(
+                                        note = note,
+                                        onToggleDone = { onToggleDone(note) },
+                                        onEdit = { onEditNote(note) },
+                                        onDelete = { noteToDelete = note }
+                                    )
+                                }
+                            }
+
+                            // Section 2: Sudah Selesai
+                            if (completedNotes.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(top = 14.dp, bottom = 2.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF005338))
+                                        )
+                                        Text(
+                                            text = "Sudah Selesai (${completedNotes.size})",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF005338)
+                                        )
+                                    }
+                                }
+                                items(completedNotes, key = { it.id ?: it.title }) { note ->
+                                    NoteCard(
+                                        note = note,
+                                        onToggleDone = { onToggleDone(note) },
+                                        onEdit = { onEditNote(note) },
+                                        onDelete = { noteToDelete = note }
+                                    )
+                                }
                             }
                         }
                     }
@@ -212,12 +247,12 @@ fun AgendaListContent(
             },
             title = {
                 Text(
-                    text = "Hapus Catatan?",
+                    text = "Hapus Agenda?",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             },
-            text = { Text("Catatan ini akan dihapus permanen.") },
+            text = { Text("Agenda ini akan dihapus permanen.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -238,7 +273,8 @@ private fun EventContextCard(
     title: String,
     date: String,
     location: String,
-    status: String
+    status: String,
+    imageUrl: String? = "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800"
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -251,18 +287,29 @@ private fun EventContextCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Column(
@@ -345,11 +392,18 @@ private fun NoteCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isCompleted = note.isDone
+    val cardBackground = if (isCompleted) {
+        MaterialTheme.colorScheme.surfaceContainerLow
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerLowest
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = cardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isCompleted) 0.dp else 1.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -361,13 +415,13 @@ private fun NoteCard(
                     .size(24.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .background(
-                        if (note.isDone) Color(0xFFE6F4EA)
+                        if (isCompleted) Color(0xFFE6F4EA)
                         else MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                     .clickable { onToggleDone() },
                 contentAlignment = Alignment.Center
             ) {
-                if (note.isDone) {
+                if (isCompleted) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
@@ -380,20 +434,40 @@ private fun NoteCard(
             Spacer(Modifier.width(12.dp))
 
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = note.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    textDecoration = if (note.isDone) TextDecoration.LineThrough else null,
-                    color = if (note.isDone) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = note.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isCompleted) FontWeight.Medium else FontWeight.SemiBold,
+                        color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isCompleted) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color(0xFFE6F4EA))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Selesai",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF005338)
+                            )
+                        }
+                    }
+                }
                 if (!note.notes.isNullOrBlank()) {
                     Text(
                         text = note.notes,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -406,13 +480,13 @@ private fun NoteCard(
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(12.dp)
                     )
                     Text(
                         text = note.date,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (isCompleted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -460,7 +534,7 @@ private fun EmptyNotesState(modifier: Modifier = Modifier) {
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Belum ada catatan",
+            text = "Belum ada agenda",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -472,7 +546,6 @@ private fun EmptyNotesState(modifier: Modifier = Modifier) {
     }
 }
 
-// ---------- Preview ----------
 @Preview(showBackground = true)
 @Composable
 fun AgendaListContentPreview() {
@@ -480,10 +553,8 @@ fun AgendaListContentPreview() {
         AgendaListContent(
             state = UiState.Success(
                 listOf(
-                    AgendaModel("1", null, "e1", "Konfirmasi busana pengantin", "2026-06-25", "Fitting busana akhir bersama Sanggar...", true),
-                    AgendaModel("2", null, "e1", "Cetak tiket & barcode QR", "2026-07-02", "Koordinasi vendor percetakan...", false),
-                    AgendaModel("3", null, "e1", "Susun rundown kedatangan vendor", "2026-07-10", "Plotting waktu loading-in sound...", false),
-                    AgendaModel("4", null, "e1", "Review checklist katering", "2026-07-14", "Finalisasi 12 menu prasmanan...", false)
+                    AgendaModel("1", null, "e1", "Konfirmasi busana pengantin", "2026-06-25", "Fitting busana akhir...", true),
+                    AgendaModel("2", null, "e1", "Cetak tiket & barcode QR", "2026-07-02", "Koordinasi vendor percetakan...", false)
                 )
             ),
             onBack = {},

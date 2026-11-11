@@ -2,6 +2,7 @@ package com.managevent.app.features.katalog.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class EventModel(
@@ -14,5 +15,6 @@ data class EventModel(
     val price: Double = 0.0,
     @SerialName("image_url")
     val imageUrl: String? = null,
+    @Transient
     val isFavorite: Boolean = false
 )

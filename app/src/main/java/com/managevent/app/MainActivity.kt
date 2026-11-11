@@ -30,7 +30,6 @@ class MainActivity : ComponentActivity() {
                 val showBottomBar = currentRoute != Screen.AgendaForm.route &&
                         currentRoute != Screen.KatalogForm.route &&
                         currentRoute != Screen.UlasanForm.route &&
-                        currentRoute != Screen.UlasanList.route &&
                         currentRoute != Screen.Checkout.route
 
                 Scaffold(

@@ -1,6 +1,6 @@
 package com.managevent.app.features.agenda.ui
 
-import androidx.compose.foundation.clickable
+import android.app.DatePickerDialog as AndroidDatePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,8 +29,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,7 +41,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,39 +49,49 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.theme.ManageventTheme
-import com.managevent.app.features.agenda.viewmodel.AgendaViewModel
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.Calendar
 import java.util.Locale
-import java.util.TimeZone
 
-// ---------- Stateful ----------
 @Composable
 fun AgendaFormScreen(
+    isEditMode: Boolean,
+    titleInput: String,
+    notesInput: String,
+    dateInput: String,
+    isDoneInput: Boolean,
+    titleError: String?,
+    dateError: String?,
+    isSaving: Boolean,
     modifier: Modifier = Modifier,
-    viewModel: AgendaViewModel = viewModel(),
+    onTitleChange: (String) -> Unit = {},
+    onNotesChange: (String) -> Unit = {},
+    onDateChange: (String) -> Unit = {},
+    onDoneChange: (Boolean) -> Unit = {},
+    onSave: () -> Unit = {},
+    onDeleteCurrentNote: (() -> Unit) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     AgendaFormContent(
-        isEditMode = viewModel.isEditMode,
-        titleInput = viewModel.titleInput,
-        notesInput = viewModel.notesInput,
-        dateInput = viewModel.dateInput,
-        isDoneInput = viewModel.isDoneInput,
-        titleError = viewModel.titleError,
-        dateError = viewModel.dateError,
-        isSaving = viewModel.isSaving,
-        onTitleChange = viewModel::onTitleChange,
-        onNotesChange = viewModel::onNotesChange,
-        onDateChange = viewModel::onDateChange,
-        onDoneChange = viewModel::onDoneChange,
-        onSave = { viewModel.save(onSuccess = onBack) },
+        isEditMode = isEditMode,
+        titleInput = titleInput,
+        notesInput = notesInput,
+        dateInput = dateInput,
+        isDoneInput = isDoneInput,
+        titleError = titleError,
+        dateError = dateError,
+        isSaving = isSaving,
+        onTitleChange = onTitleChange,
+        onNotesChange = onNotesChange,
+        onDateChange = onDateChange,
+        onDoneChange = onDoneChange,
+        onSave = onSave,
         onDelete = { showDeleteDialog = true },
         onBack = onBack,
         modifier = modifier
@@ -94,13 +101,13 @@ fun AgendaFormScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-            title = { Text("Hapus Catatan?") },
-            text = { Text("Catatan ini akan dihapus permanen dari agenda kamu.") },
+            title = { Text("Hapus Agenda?") },
+            text = { Text("Agenda ini akan dihapus permanen.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
-                        viewModel.deleteCurrentNote(onDone = onBack)
+                        onDeleteCurrentNote(onBack)
                     }
                 ) {
                     Text("Hapus", color = MaterialTheme.colorScheme.error)
@@ -115,7 +122,6 @@ fun AgendaFormScreen(
     }
 }
 
-// ---------- Stateless ----------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaFormContent(
@@ -136,14 +142,44 @@ fun AgendaFormContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    fun openDatePicker() {
+        val calendar = Calendar.getInstance()
+        if (dateInput.isNotBlank()) {
+            try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                sdf.parse(dateInput)?.let { date ->
+                    calendar.time = date
+                }
+            } catch (_: Exception) {}
+        }
+
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = AndroidDatePickerDialog(
+            context,
+            { _, selectedYear, selectedMonth, selectedDay ->
+                val selectedCal = Calendar.getInstance()
+                selectedCal.set(selectedYear, selectedMonth, selectedDay)
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                onDateChange(sdf.format(selectedCal.time))
+            },
+            year,
+            month,
+            day
+        )
+        datePickerDialog.show()
+    }
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (isEditMode) "Ubah Catatan" else "Tambah Catatan")
+                    Text(if (isEditMode) "Ubah Agenda" else "Tambah Agenda")
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -219,7 +255,7 @@ fun AgendaFormContent(
                 }
             }
 
-            // Field 2: Isi Catatan
+            // Field 2: Deskripsi Agenda
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -227,7 +263,7 @@ fun AgendaFormContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Isi Catatan",
+                        text = "Deskripsi Agenda",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -240,7 +276,7 @@ fun AgendaFormContent(
                 OutlinedTextField(
                     value = notesInput,
                     onValueChange = onNotesChange,
-                    placeholder = { Text("Tuliskan rincian, instruksi khusus, atau catatan koordinasi tim...") },
+                    placeholder = { Text("Tuliskan rincian, instruksi khusus, atau deskripsi agenda...") },
                     minLines = 3,
                     maxLines = 5,
                     shape = RoundedCornerShape(12.dp),
@@ -252,7 +288,7 @@ fun AgendaFormContent(
                 )
             }
 
-            // Field 3: Target Selesai
+            // Field 3: Target Selesai (Native DatePicker Dialog)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -273,13 +309,12 @@ fun AgendaFormContent(
                     )
                 }
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true },
+                    onClick = { openDatePicker() },
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    )
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
@@ -394,7 +429,6 @@ fun AgendaFormContent(
 
             Spacer(Modifier.height(8.dp))
 
-            // Coral "Simpan" Button (#FC6955 / secondaryContainer)
             Button(
                 onClick = onSave,
                 enabled = !isSaving,
@@ -423,7 +457,6 @@ fun AgendaFormContent(
                 }
             }
 
-            // "Hapus Catatan" Button (Edit Mode Only)
             if (isEditMode) {
                 Button(
                     onClick = onDelete,
@@ -442,44 +475,12 @@ fun AgendaFormContent(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Hapus Catatan", style = MaterialTheme.typography.titleSmall)
+                    Text("Hapus Agenda", style = MaterialTheme.typography.titleSmall)
                 }
             }
-        }
-    }
-
-    // Material 3 Date Picker Dialog
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val millis = datePickerState.selectedDateMillis
-                        if (millis != null) {
-                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                            sdf.timeZone = TimeZone.getTimeZone("UTC")
-                            onDateChange(sdf.format(Date(millis)))
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text("Pilih")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Batal")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }
-
-// ---------- Previews ----------
 
 @Preview(showBackground = true, name = "(a) Mode Tambah Kosong")
 @Composable
@@ -491,54 +492,6 @@ fun AgendaFormContentAddPreview() {
             notesInput = "",
             dateInput = "",
             isDoneInput = false,
-            titleError = null,
-            dateError = null,
-            isSaving = false,
-            onTitleChange = {},
-            onNotesChange = {},
-            onDateChange = {},
-            onDoneChange = {},
-            onSave = {},
-            onDelete = {},
-            onBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "(b) Mode Tambah Validasi Error")
-@Composable
-fun AgendaFormContentErrorPreview() {
-    ManageventTheme {
-        AgendaFormContent(
-            isEditMode = false,
-            titleInput = "",
-            notesInput = "",
-            dateInput = "",
-            isDoneInput = false,
-            titleError = "Judul wajib diisi",
-            dateError = "Target selesai wajib diisi",
-            isSaving = false,
-            onTitleChange = {},
-            onNotesChange = {},
-            onDateChange = {},
-            onDoneChange = {},
-            onSave = {},
-            onDelete = {},
-            onBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "(c) Mode Ubah Terisi")
-@Composable
-fun AgendaFormContentEditPreview() {
-    ManageventTheme {
-        AgendaFormContent(
-            isEditMode = true,
-            titleInput = "Konfirmasi busana pengantin",
-            notesInput = "Fitting busana akhir bersama Sanggar Nusantara dan fotografer utama.",
-            dateInput = "2026-06-25",
-            isDoneInput = true,
             titleError = null,
             dateError = null,
             isSaving = false,

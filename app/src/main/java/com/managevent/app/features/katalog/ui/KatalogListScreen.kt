@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,8 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.managevent.app.core.components.LoadingScreen
 import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.util.UiState
@@ -44,29 +41,29 @@ import com.managevent.app.features.katalog.ui.components.KatalogHeader
 import com.managevent.app.features.katalog.ui.components.KatalogSearchBar
 import com.managevent.app.features.katalog.ui.components.LocationAndBadgeBar
 import com.managevent.app.features.katalog.ui.components.SpecialPromoBanner
-import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
 
 @Composable
 fun KatalogListScreen(
+    eventsState: UiState<List<EventModel>>,
+    searchQuery: String,
+    selectedCategory: String,
     modifier: Modifier = Modifier,
-    viewModel: KatalogViewModel = viewModel(),
-    userRole: String = "PEMESAN", // "VENDOR" atau "PEMESAN"
+    userRole: String = "PEMESAN",
     onEventClick: (String) -> Unit = {},
+    onFavoriteToggle: (String) -> Unit = {},
+    onSearchQueryChange: (String) -> Unit = {},
+    onCategorySelected: (String) -> Unit = {},
     onAddEventClick: () -> Unit = {}
 ) {
-    val eventsState by viewModel.eventsState.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
-
     KatalogListContent(
         eventsState = eventsState,
         searchQuery = searchQuery,
         selectedCategory = selectedCategory,
         userRole = userRole,
         onEventClick = onEventClick,
-        onFavoriteToggle = { eventId -> viewModel.toggleFavorite(eventId) },
-        onSearchQueryChange = { query -> viewModel.onSearchQueryChange(query) },
-        onCategorySelected = { category -> viewModel.onCategorySelected(category) },
+        onFavoriteToggle = onFavoriteToggle,
+        onSearchQueryChange = onSearchQueryChange,
+        onCategorySelected = onCategorySelected,
         onAddEventClick = onAddEventClick,
         modifier = modifier
     )
@@ -133,7 +130,6 @@ fun KatalogListContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Section Top Headers
                         item(span = { GridItemSpan(2) }) {
                             Column(modifier = Modifier.padding(horizontal = 0.dp)) {
                                 KatalogHeader()
@@ -148,7 +144,6 @@ fun KatalogListContent(
                                 )
                                 SpecialPromoBanner()
 
-                                // Section Title: Event Mendatang
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -168,7 +163,6 @@ fun KatalogListContent(
                                                 color = Color(0xFF1C1B1F)
                                             )
                                         )
-                                        // Dot Oranye Indicator
                                         Box(
                                             modifier = Modifier
                                                 .size(8.dp)
@@ -189,7 +183,6 @@ fun KatalogListContent(
                             }
                         }
 
-                        // Empty State if no events match search/filter
                         if (events.isEmpty()) {
                             item(span = { GridItemSpan(2) }) {
                                 Box(
@@ -206,7 +199,6 @@ fun KatalogListContent(
                             }
                         }
 
-                        // Event Cards Grid
                         items(
                             items = events,
                             key = { it.id }
@@ -240,33 +232,6 @@ fun KatalogListContentPreview() {
                         location = "Jakarta Convention Center",
                         price = 150000.0,
                         imageUrl = "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800"
-                    ),
-                    EventModel(
-                        id = "2",
-                        title = "Jakarta Jazz Symphony 2026",
-                        category = "Konser",
-                        date = "22 Agustus 2026",
-                        location = "Istora Senayan",
-                        price = 350000.0,
-                        imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800"
-                    ),
-                    EventModel(
-                        id = "3",
-                        title = "Indonesia Tech Summit 2027",
-                        category = "Seminar",
-                        date = "14 Februari 2027",
-                        location = "ICE BSD Tangerang",
-                        price = 250000.0,
-                        imageUrl = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=800"
-                    ),
-                    EventModel(
-                        id = "4",
-                        title = "Kids & Family Birthday Festival",
-                        category = "Ulang Tahun",
-                        date = "10 Mei 2026",
-                        location = "Grand City Surabaya",
-                        price = 75000.0,
-                        imageUrl = "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?q=80&w=800"
                     )
                 )
             ),
