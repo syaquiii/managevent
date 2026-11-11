@@ -9,7 +9,9 @@ sealed class Screen(val route: String) {
 
     // Feature 1: Katalog (Muhammad Abdul Fatah)
     data object KatalogList : Screen("katalog_list")
-    data object KatalogForm : Screen("katalog_form")
+    data object KatalogForm : Screen("katalog_form?eventId={eventId}") {
+        fun createRoute(eventId: String? = null) = if (eventId != null) "katalog_form?eventId=$eventId" else "katalog_form"
+    }
     data object KatalogDetail : Screen("katalog_detail/{eventId}") {
         fun createRoute(eventId: String) = "katalog_detail/$eventId"
     }
