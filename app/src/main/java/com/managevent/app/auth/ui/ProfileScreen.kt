@@ -1,5 +1,6 @@
 package com.managevent.app.auth.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,20 +27,31 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.outlined.ConfirmationNumber
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,15 +66,23 @@ import com.managevent.app.core.theme.ManageventTheme
 fun ProfileScreen(
     user: UserModel = UserModel(
         email = "user@managevent.com",
-        fullName = "Sarah Wijaya",
+        fullName = "Pengguna Managevent",
         role = "PEMESAN"
     ),
     modifier: Modifier = Modifier,
-    onLogoutClick: () -> Unit = {}
+    onLogoutClick: () -> Unit = {},
+    onNavigateToRiwayat: () -> Unit = {},
+    onNavigateToWishlist: () -> Unit = {},
+    onUpdateProfile: (String, String) -> Unit = { _, _ -> },
+    onUpdatePassword: (String) -> Unit = {}
 ) {
     ProfileContent(
         user = user,
         onLogoutClick = onLogoutClick,
+        onNavigateToRiwayat = onNavigateToRiwayat,
+        onNavigateToWishlist = onNavigateToWishlist,
+        onUpdateProfile = onUpdateProfile,
+        onUpdatePassword = onUpdatePassword,
         modifier = modifier
     )
 }
@@ -71,8 +91,16 @@ fun ProfileScreen(
 fun ProfileContent(
     user: UserModel,
     onLogoutClick: () -> Unit,
+    onNavigateToRiwayat: () -> Unit,
+    onNavigateToWishlist: () -> Unit,
+    onUpdateProfile: (String, String) -> Unit,
+    onUpdatePassword: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { AppTopBar(title = "Profil Pengguna") },
@@ -88,9 +116,11 @@ fun ProfileContent(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Avatar Container with Clean Vector Icon
+            // Avatar Container with Vector Icon & Edit Badge
             Box(
-                modifier = Modifier.size(96.dp),
+                modifier = Modifier
+                    .size(96.dp)
+                    .clickable { showEditProfileDialog = true },
                 contentAlignment = Alignment.BottomEnd
             ) {
                 Box(
@@ -108,7 +138,6 @@ fun ProfileContent(
                     )
                 }
 
-                // Edit Camera Icon Overlay
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -139,7 +168,7 @@ fun ProfileContent(
 
             // Email
             Text(
-                text = user.email,
+                text = user.email.ifEmpty { "user@managevent.com" },
                 style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
             )
 
@@ -148,7 +177,8 @@ fun ProfileContent(
             // Clean Role Badge Pill with Vector Icon
             Surface(
                 color = Color(0xFFE2DFFF),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.clickable { showEditProfileDialog = true }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -184,22 +214,22 @@ fun ProfileContent(
                     ProfileOptionItem(
                         icon = Icons.Default.AccountCircle,
                         title = "Ubah Profil & Data Diri",
-                        onClick = {}
+                        onClick = { showEditProfileDialog = true }
                     )
                     ProfileOptionItem(
                         icon = Icons.Default.Receipt,
                         title = "Riwayat Transaksi Saya",
-                        onClick = {}
+                        onClick = onNavigateToRiwayat
                     )
                     ProfileOptionItem(
                         icon = Icons.Default.Favorite,
                         title = "Koleksi Favorit Saya",
-                        onClick = {}
+                        onClick = onNavigateToWishlist
                     )
                     ProfileOptionItem(
                         icon = Icons.Default.Lock,
                         title = "Keamanan & Kata Sandi",
-                        onClick = {}
+                        onClick = { showChangePasswordDialog = true }
                     )
                 }
             }
@@ -215,6 +245,137 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    // Edit Profile Dialog
+    if (showEditProfileDialog) {
+        var newFullName by remember { mutableStateOf(user.fullName.orEmpty()) }
+        var newRole by remember { mutableStateOf(user.role) }
+
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = {
+                Text(
+                    text = "Ubah Profil & Data Diri",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Nama Lengkap", style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(
+                        value = newFullName,
+                        onValueChange = { newFullName = it },
+                        placeholder = { Text("Nama Lengkap") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Text("Role Akun", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = newRole == "PEMESAN",
+                            onClick = { newRole = "PEMESAN" },
+                            label = { Text("Pemesan Tiket") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFE2DFFF),
+                                selectedLabelColor = Color(0xFF3525CD)
+                            )
+                        )
+                        FilterChip(
+                            selected = newRole == "VENDOR",
+                            onClick = { newRole = "VENDOR" },
+                            label = { Text("Vendor / EO") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFE2DFFF),
+                                selectedLabelColor = Color(0xFF3525CD)
+                            )
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newFullName.isNotBlank()) {
+                            onUpdateProfile(newFullName, newRole)
+                            Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
+                            showEditProfileDialog = false
+                        } else {
+                            Toast.makeText(context, "Nama tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Simpan", fontWeight = FontWeight.Bold, color = Color(0xFF3525CD))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Batal")
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    // Change Password Dialog
+    if (showChangePasswordDialog) {
+        var newPassword by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showChangePasswordDialog = false },
+            title = {
+                Text(
+                    text = "Keamanan & Kata Sandi",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Kata Sandi Baru", style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholder = { Text("Minimal 6 karakter") },
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newPassword.length >= 6) {
+                            onUpdatePassword(newPassword)
+                            Toast.makeText(context, "Kata sandi diperbarui", Toast.LENGTH_SHORT).show()
+                            showChangePasswordDialog = false
+                        } else {
+                            Toast.makeText(context, "Minimal 6 karakter", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Perbarui", fontWeight = FontWeight.Bold, color = Color(0xFF3525CD))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangePasswordDialog = false }) {
+                    Text("Batal")
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }
 
@@ -278,7 +439,11 @@ fun ProfileContentPreview() {
                 fullName = "Sarah Wijaya",
                 role = "PEMESAN"
             ),
-            onLogoutClick = {}
+            onLogoutClick = {},
+            onNavigateToRiwayat = {},
+            onNavigateToWishlist = {},
+            onUpdateProfile = { _, _ -> },
+            onUpdatePassword = {}
         )
     }
 }

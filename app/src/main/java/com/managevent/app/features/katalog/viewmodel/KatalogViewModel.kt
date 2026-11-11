@@ -3,8 +3,10 @@ package com.managevent.app.features.katalog.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.toUserFriendlyMessage
 import com.managevent.app.features.katalog.data.EventModel
 import com.managevent.app.features.katalog.data.KatalogRepository
+import com.managevent.app.features.wishlist.data.WishlistRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class KatalogViewModel(
-    private val repository: KatalogRepository = KatalogRepository()
+    private val repository: KatalogRepository = KatalogRepository(),
+    private val wishlistRepository: WishlistRepository = WishlistRepository()
 ) : ViewModel() {
 
     private var rawEvents: List<EventModel> = emptyList()
@@ -36,13 +39,23 @@ class KatalogViewModel(
         fetchEvents()
     }
 
-    fun fetchEvents() {
+    fun fetchEvents(userId: String = "") {
         viewModelScope.launch {
             _eventsState.value = UiState.Loading
             try {
                 when (val result = repository.getEvents()) {
                     is UiState.Success -> {
-                        rawEvents = result.data
+                        val events = result.data
+                        val favRes = wishlistRepository.getWishlistEvents(userId)
+                        val favIds = if (favRes is UiState.Success) {
+                            favRes.data.map { it.id }.toSet()
+                        } else {
+                            emptySet()
+                        }
+
+                        rawEvents = events.map { event ->
+                            event.copy(isFavorite = favIds.contains(event.id))
+                        }
                         applyFilter()
                     }
                     is UiState.Error -> {
@@ -53,7 +66,7 @@ class KatalogViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _eventsState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+                _eventsState.value = UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
@@ -71,7 +84,7 @@ class KatalogViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _eventDetailState.value = UiState.Error(e.localizedMessage ?: "Gagal memuat detail event")
+                _eventDetailState.value = UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
@@ -86,15 +99,53 @@ class KatalogViewModel(
         applyFilter()
     }
 
-    fun toggleFavorite(eventId: String) {
+    fun syncFavoriteStateLocally(eventId: String, isFavorite: Boolean) {
         rawEvents = rawEvents.map { event ->
             if (event.id == eventId) {
-                event.copy(isFavorite = !event.isFavorite)
+                event.copy(isFavorite = isFavorite)
             } else {
                 event
             }
         }
         applyFilter()
+    }
+
+    fun toggleFavorite(
+        eventId: String,
+        userId: String = "",
+        onFeedback: (String) -> Unit = {}
+    ) {
+        var isFavNow = false
+
+        rawEvents = rawEvents.map { event ->
+            if (event.id == eventId) {
+                val nextState = !event.isFavorite
+                isFavNow = nextState
+                event.copy(isFavorite = nextState)
+            } else {
+                event
+            }
+        }
+        applyFilter()
+
+        viewModelScope.launch {
+            try {
+                val result = if (isFavNow) {
+                    wishlistRepository.addToWishlist(userId, eventId)
+                } else {
+                    wishlistRepository.removeFromWishlist(userId, eventId)
+                }
+                if (result is UiState.Success) {
+                    onFeedback(result.data)
+                } else if (result is UiState.Error) {
+                    onFeedback(result.message)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                onFeedback("Gagal memperbarui favorit di server.")
+            }
+        }
     }
 
     fun addEvent(event: EventModel, onComplete: () -> Unit = {}) {
@@ -113,7 +164,7 @@ class KatalogViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _formState.value = UiState.Error(e.localizedMessage ?: "Gagal menambah event")
+                _formState.value = UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
@@ -132,7 +183,7 @@ class KatalogViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _formState.value = UiState.Error(e.localizedMessage ?: "Gagal memperbarui event")
+                _formState.value = UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
@@ -150,7 +201,7 @@ class KatalogViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _eventsState.value = UiState.Error(e.localizedMessage ?: "Gagal menghapus event")
+                _eventsState.value = UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }

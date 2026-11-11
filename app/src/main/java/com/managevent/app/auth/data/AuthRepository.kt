@@ -115,6 +115,42 @@ class AuthRepository {
         }
     }
 
+    suspend fun updateProfile(userId: String, fullName: String, role: String): UiState<UserModel> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val email = client.auth.currentUserOrNull()?.email.orEmpty()
+                val updatedUser = UserModel(
+                    id = userId,
+                    email = email,
+                    fullName = fullName,
+                    role = role
+                )
+                client.postgrest["profiles"].upsert(updatedUser) {
+                    filter { eq("id", userId) }
+                }
+                UiState.Success(updatedUser)
+            } catch (e: Exception) {
+                UiState.Error(e.toUserFriendlyMessage())
+            }
+        }
+    }
+
+    suspend fun updatePassword(newPassword: String): UiState<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (newPassword.length < 6) {
+                    return@withContext UiState.Error("Password minimal 6 karakter")
+                }
+                client.auth.updateUser {
+                    password = newPassword
+                }
+                UiState.Success("Password berhasil diperbarui")
+            } catch (e: Exception) {
+                UiState.Error(e.toUserFriendlyMessage())
+            }
+        }
+    }
+
     suspend fun logout() {
         withContext(Dispatchers.IO) {
             try {

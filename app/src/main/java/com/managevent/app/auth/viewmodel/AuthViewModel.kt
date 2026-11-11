@@ -44,6 +44,34 @@ class AuthViewModel(
         }
     }
 
+    fun updateProfile(fullName: String, role: String) {
+        val uid = _currentUser.value?.id.orEmpty()
+        viewModelScope.launch {
+            try {
+                val result = repository.updateProfile(uid, fullName, role)
+                if (result is UiState.Success) {
+                    _currentUser.value = result.data
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _currentUser.value = _currentUser.value?.copy(fullName = fullName, role = role)
+            }
+        }
+    }
+
+    fun updatePassword(newPassword: String) {
+        viewModelScope.launch {
+            try {
+                repository.updatePassword(newPassword)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Ignore
+            }
+        }
+    }
+
     fun login(
         email: String,
         pass: String,

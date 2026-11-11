@@ -1,10 +1,12 @@
 package com.managevent.app.core.navigation
 
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -46,6 +48,7 @@ fun AppNavHost(
     val authViewModel: AuthViewModel = viewModel()
     val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
     val loginState by authViewModel.loginState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     NavHost(
         navController = navController,
@@ -111,6 +114,10 @@ fun AppNavHost(
             )
         }
         composable(Screen.Profile.route) {
+            LaunchedEffect(Unit) {
+                authViewModel.checkCurrentSession()
+            }
+
             ProfileScreen(
                 user = currentUser ?: UserModel(
                     email = "user@managevent.com",
@@ -123,6 +130,14 @@ fun AppNavHost(
                             popUpTo(0) { inclusive = true }
                         }
                     }
+                },
+                onNavigateToRiwayat = { navController.navigate(Screen.RiwayatPemesanan.route) },
+                onNavigateToWishlist = { navController.navigate(Screen.Wishlist.route) },
+                onUpdateProfile = { fullName, role ->
+                    authViewModel.updateProfile(fullName, role)
+                },
+                onUpdatePassword = { newPassword ->
+                    authViewModel.updatePassword(newPassword)
                 }
             )
         }
@@ -134,13 +149,21 @@ fun AppNavHost(
             val searchQuery by katalogViewModel.searchQuery.collectAsStateWithLifecycle()
             val selectedCategory by katalogViewModel.selectedCategory.collectAsStateWithLifecycle()
 
+            LaunchedEffect(currentUser) {
+                katalogViewModel.fetchEvents(currentUser?.id.orEmpty())
+            }
+
             KatalogListScreen(
                 eventsState = eventsState,
                 searchQuery = searchQuery,
                 selectedCategory = selectedCategory,
                 userRole = currentUser?.role ?: "PEMESAN",
                 onEventClick = { eventId -> navController.navigate(Screen.KatalogDetail.createRoute(eventId)) },
-                onFavoriteToggle = katalogViewModel::toggleFavorite,
+                onFavoriteToggle = { eventId ->
+                    katalogViewModel.toggleFavorite(eventId, currentUser?.id.orEmpty()) { msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                },
                 onSearchQueryChange = katalogViewModel::onSearchQueryChange,
                 onCategorySelected = katalogViewModel::onCategorySelected,
                 onAddEventClick = { navController.navigate(Screen.KatalogForm.route) }
@@ -161,7 +184,9 @@ fun AppNavHost(
                 detailState = detailState,
                 onBackClick = { navController.popBackStack() },
                 onFavoriteToggle = {
-                    katalogViewModel.toggleFavorite(eventId)
+                    katalogViewModel.toggleFavorite(eventId, currentUser?.id.orEmpty()) { msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
                     katalogViewModel.fetchEventById(eventId)
                 },
                 onBookClick = { id -> navController.navigate(Screen.Checkout.createRoute(id)) },
@@ -173,7 +198,7 @@ fun AppNavHost(
             KatalogFormScreen(
                 onBackClick = { navController.popBackStack() },
                 onSuccessSubmit = {
-                    katalogViewModel.fetchEvents()
+                    katalogViewModel.fetchEvents(currentUser?.id.orEmpty())
                     navController.popBackStack()
                 }
             )
@@ -308,8 +333,8 @@ fun AppNavHost(
             val wishlistViewModel: WishlistViewModel = viewModel()
             val wishlistState by wishlistViewModel.wishlistState.collectAsStateWithLifecycle()
 
-            LaunchedEffect(Unit) {
-                wishlistViewModel.fetchWishlist()
+            LaunchedEffect(currentUser) {
+                wishlistViewModel.fetchWishlist(currentUser?.id.orEmpty())
             }
 
             WishlistScreen(
@@ -321,7 +346,11 @@ fun AppNavHost(
                 onEventClick = { eventId ->
                     navController.navigate(Screen.KatalogDetail.createRoute(eventId))
                 },
-                onFavoriteToggle = wishlistViewModel::removeFromWishlist
+                onFavoriteToggle = { eventId ->
+                    wishlistViewModel.removeFromWishlist(eventId, currentUser?.id.orEmpty()) { msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
         }
         composable(Screen.WishlistDetail.route) { backStackEntry ->
@@ -348,6 +377,11 @@ fun AppNavHost(
                 onQueryChange = agendaViewModel::onSearchChange,
                 onOpenNotes = { eventId ->
                     navController.navigate(Screen.AgendaDetailList.createRoute(eventId))
+                },
+                onExplore = {
+                    navController.navigate(Screen.KatalogList.route) {
+                        popUpTo(Screen.KatalogList.route) { inclusive = true }
+                    }
                 }
             )
         }

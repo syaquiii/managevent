@@ -55,13 +55,15 @@ fun BookedEventListScreen(
     query: String,
     modifier: Modifier = Modifier,
     onQueryChange: (String) -> Unit = {},
-    onOpenNotes: (String) -> Unit = {}
+    onOpenNotes: (String) -> Unit = {},
+    onExplore: () -> Unit = {}
 ) {
     BookedEventListContent(
         state = state,
         query = query,
         onQueryChange = onQueryChange,
         onOpenNotes = onOpenNotes,
+        onExplore = onExplore,
         modifier = modifier
     )
 }
@@ -72,8 +74,8 @@ fun BookedEventListContent(
     query: String,
     onQueryChange: (String) -> Unit,
     onOpenNotes: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    onExplore: () -> Unit = {}
+    onExplore: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier,
@@ -357,7 +359,8 @@ fun BookedEventListContentPreview() {
             ),
             query = "",
             onQueryChange = {},
-            onOpenNotes = {}
+            onOpenNotes = {},
+            onExplore = {}
         )
     }
 }

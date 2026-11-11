@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
@@ -65,7 +64,8 @@ fun WishlistScreen(
     modifier: Modifier = Modifier,
     onCategorySelect: (String) -> Unit = {},
     onEventClick: (String) -> Unit = {},
-    onFavoriteToggle: (String) -> Unit = {}
+    onFavoriteToggle: (String) -> Unit = {},
+    onNavigateToProfile: () -> Unit = {}
 ) {
     WishlistContent(
         wishlistState = wishlistState,
@@ -75,6 +75,7 @@ fun WishlistScreen(
         onCategorySelect = onCategorySelect,
         onEventClick = onEventClick,
         onFavoriteToggle = onFavoriteToggle,
+        onNavigateToProfile = onNavigateToProfile,
         modifier = modifier
     )
 }
@@ -89,6 +90,7 @@ fun WishlistContent(
     onCategorySelect: (String) -> Unit,
     onEventClick: (String) -> Unit,
     onFavoriteToggle: (String) -> Unit,
+    onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -120,19 +122,14 @@ fun WishlistContent(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifikasi",
-                            tint = Color(0xFF181445)
-                        )
-                    }
+                    // Dihapus Ikon Notifikasi (Lonceng) Pajangan Sesuai Feedback
                     Box(
                         modifier = Modifier
-                            .padding(end = 12.dp)
+                            .padding(end = 16.dp)
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE2DFFF)),
+                            .background(Color(0xFFE2DFFF))
+                            .clickable { onNavigateToProfile() },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -185,32 +182,8 @@ fun WishlistContent(
                         )
                     }
                 }
-
-                Surface(
-                    color = Color(0xFFF0EBFF),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.clickable {}
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter",
-                            tint = Color(0xFF181445),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Filter",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = Color(0xFF181445),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    }
-                }
+                
+                // Dihapus Tombol Filter Pajangan Sesuai Feedback
             }
 
             LazyRow(
@@ -463,7 +436,8 @@ fun WishlistContentPreview() {
             categories = listOf("Semua", "Konser Musik", "Pernikahan", "Festival", "Pameran"),
             onCategorySelect = {},
             onEventClick = {},
-            onFavoriteToggle = {}
+            onFavoriteToggle = {},
+            onNavigateToProfile = {}
         )
     }
 }
