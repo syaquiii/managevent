@@ -60,6 +60,10 @@ fun AppNavHost(
             )
         }
         composable(Screen.Login.route) {
+            LaunchedEffect(Unit) {
+                authViewModel.resetAuthState()
+            }
+
             LoginScreen(
                 loginState = loginState,
                 onLoginClick = { email, password ->
@@ -73,10 +77,17 @@ fun AppNavHost(
                         }
                     )
                 },
-                onNavigateToRegister = { navController.navigate(Screen.Register.route) }
+                onNavigateToRegister = {
+                    authViewModel.resetAuthState()
+                    navController.navigate(Screen.Register.route)
+                }
             )
         }
         composable(Screen.Register.route) {
+            LaunchedEffect(Unit) {
+                authViewModel.resetAuthState()
+            }
+
             RegisterScreen(
                 registerState = loginState,
                 onRegisterClick = { email, password, fullName, role ->
@@ -92,7 +103,10 @@ fun AppNavHost(
                         }
                     )
                 },
-                onNavigateToLogin = { navController.popBackStack() }
+                onNavigateToLogin = {
+                    authViewModel.resetAuthState()
+                    navController.popBackStack()
+                }
             )
         }
         composable(Screen.Profile.route) {

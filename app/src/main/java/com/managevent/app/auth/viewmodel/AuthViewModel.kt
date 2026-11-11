@@ -26,6 +26,10 @@ class AuthViewModel(
         checkCurrentSession()
     }
 
+    fun resetAuthState() {
+        _loginState.value = UiState.Idle
+    }
+
     fun checkCurrentSession() {
         viewModelScope.launch {
             try {

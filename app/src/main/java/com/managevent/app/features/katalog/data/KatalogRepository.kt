@@ -13,7 +13,7 @@ class KatalogRepository {
     fun getMockEvents(): List<EventModel> {
         return listOf(
             EventModel(
-                id = "evt-1",
+                id = "11111111-1111-1111-1111-111111111111",
                 title = "Pameran Pernikahan Nusantara 2026",
                 description = "Pameran vendor pernikahan terbesar di Nusantara dengan promo eksklusif gaun, catering, dekorasi, dan dokumentasi terlengkap.",
                 category = "Pernikahan",
@@ -24,18 +24,18 @@ class KatalogRepository {
                 isFavorite = false
             ),
             EventModel(
-                id = "evt-2",
+                id = "22222222-2222-2222-2222-222222222222",
                 title = "Jakarta Jazz Symphony 2026",
                 description = "Konser kolaborasi musisi jazz ternama tanah air dan orkestra internasional dengan penampilan panggung megah.",
                 category = "Konser",
                 date = "22 Agustus 2026",
-                location = "Istora Senayan",
+                location = "Istora Senayan, Jakarta",
                 price = 350000.0,
                 imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800",
                 isFavorite = false
             ),
             EventModel(
-                id = "evt-3",
+                id = "33333333-3333-3333-3333-333333333333",
                 title = "Indonesia Tech Summit 2027",
                 description = "Konferensi teknologi & AI terbesar tahun 2027 menghadirkan pakar industri global, pameran startup, dan sesi networking.",
                 category = "Seminar",
@@ -46,7 +46,7 @@ class KatalogRepository {
                 isFavorite = false
             ),
             EventModel(
-                id = "evt-4",
+                id = "44444444-4444-4444-4444-444444444444",
                 title = "Kids & Family Birthday Festival",
                 description = "Festival ulang tahun anak dan keluarga terbesar dengan wahana permainan, panggung pertunjukan boneka, serta workshop kreasi.",
                 category = "Ulang Tahun",
@@ -69,7 +69,6 @@ class KatalogRepository {
                     UiState.Success(events)
                 }
             } catch (_: Exception) {
-                // Fallback ke data mock jika terjadi kegagalan jaringan/Supabase belum terkonfigurasi
                 UiState.Success(getMockEvents())
             }
         }

@@ -8,11 +8,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,13 +71,6 @@ fun LoginScreen(
     LaunchedEffect(loginState) {
         if (loginState is UiState.Error) {
             Toast.makeText(context, loginState.message, Toast.LENGTH_SHORT).show()
-            val msg = loginState.message.lowercase()
-            if (msg.contains("email") || msg.contains("salah")) {
-                emailError = loginState.message
-            }
-            if (msg.contains("password") || msg.contains("salah")) {
-                passwordError = loginState.message
-            }
         }
     }
 
@@ -132,209 +128,214 @@ fun LoginContent(
     modifier: Modifier = Modifier
 ) {
     var isPasswordVisible by remember { mutableStateOf(false) }
+    val isServerAuthError = loginState is UiState.Error
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFCF8FF)
+        containerColor = Color(0xFFFCF8FF),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
+                .windowInsetsPadding(WindowInsets.ime),
+            contentAlignment = Alignment.Center
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFC6955))
-                )
-                Text(
-                    text = "MANAGEVENT",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF3525CD),
-                        letterSpacing = 1.sp
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Masuk Akun",
-                style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF181445),
-                    fontSize = 26.sp
-                )
-            )
-
-            Text(
-                text = "Kelola event, tiket, dan pesanan Anda dalam satu aplikasi.",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFF464555),
-                    fontSize = 14.sp
-                ),
-                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
-            )
-
-            // Error Banner
-            if (loginState is UiState.Error) {
-                Text(
-                    text = loginState.message,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            // Email Field
-            Text(
-                text = "Email",
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (emailError != null) MaterialTheme.colorScheme.error else Color(0xFF181445)
-                )
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = email,
-                onValueChange = onEmailChange,
-                placeholder = { Text("nama@email.com") },
-                isError = emailError != null,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF3525CD),
-                    unfocusedContainerColor = Color(0xFFF6F2FF),
-                    focusedContainerColor = Color(0xFFF6F2FF),
-                    errorBorderColor = MaterialTheme.colorScheme.error,
-                    errorContainerColor = Color(0xFFFFF0F0)
-                )
-            )
-            if (emailError != null) {
-                Text(
-                    text = emailError,
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Password Field
-            Text(
-                text = "Password",
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (passwordError != null) MaterialTheme.colorScheme.error else Color(0xFF181445)
-                )
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = onPasswordChange,
-                placeholder = { Text("••••••••") },
-                isError = passwordError != null,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                        Icon(
-                            imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Tampilkan Password",
-                            tint = Color(0xFF777587)
-                        )
-                    }
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF3525CD),
-                    unfocusedContainerColor = Color(0xFFF6F2FF),
-                    focusedContainerColor = Color(0xFFF6F2FF),
-                    errorBorderColor = MaterialTheme.colorScheme.error,
-                    errorContainerColor = Color(0xFFFFF0F0)
-                )
-            )
-            if (passwordError != null) {
-                Text(
-                    text = passwordError,
-                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-                )
-            }
-
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFC6955))
+                    )
+                    Text(
+                        text = "MANAGEVENT",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF3525CD),
+                            letterSpacing = 1.sp
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Text(
-                    text = "Lupa Password?",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        color = Color(0xFF3525CD),
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.clickable { }
+                    text = "Masuk Akun",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF181445),
+                        fontSize = 24.sp
+                    )
                 )
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "Kelola event, tiket, dan pesanan Anda dalam satu aplikasi.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color(0xFF464555),
+                        fontSize = 13.sp
+                    ),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                )
 
-            if (loginState is UiState.Loading) {
-                Box(
+                // Top Server Error Banner (Single display)
+                if (loginState is UiState.Error) {
+                    Text(
+                        text = loginState.message,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                }
+
+                // Email Input Field
+                Text(
+                    text = "Email",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (emailError != null || isServerAuthError) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    placeholder = { Text("nama@email.com") },
+                    isError = emailError != null || isServerAuthError,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF3525CD),
+                        unfocusedContainerColor = Color(0xFFF6F2FF),
+                        focusedContainerColor = Color(0xFFF6F2FF),
+                        errorBorderColor = MaterialTheme.colorScheme.error,
+                        errorContainerColor = Color(0xFFFFF0F0)
+                    )
+                )
+                if (emailError != null) {
+                    Text(
+                        text = emailError,
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Password Input Field
+                Text(
+                    text = "Password",
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (passwordError != null || isServerAuthError) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    placeholder = { Text("••••••••") },
+                    isError = passwordError != null || isServerAuthError,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Tampilkan Password",
+                                tint = Color(0xFF777587)
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF3525CD),
+                        unfocusedContainerColor = Color(0xFFF6F2FF),
+                        focusedContainerColor = Color(0xFFF6F2FF),
+                        errorBorderColor = MaterialTheme.colorScheme.error,
+                        errorContainerColor = Color(0xFFFFF0F0)
+                    )
+                )
+                if (passwordError != null) {
+                    Text(
+                        text = passwordError,
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                    )
+                }
+
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    CircularProgressIndicator(color = Color(0xFFFC6955))
+                    Text(
+                        text = "Lupa Password?",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = Color(0xFF3525CD),
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.clickable { }
+                    )
                 }
-            } else {
-                AppButton(
-                    text = "Masuk",
-                    onClick = onLoginClick,
-                    variant = AppButtonVariant.CONVERSION_CTA
-                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (loginState is UiState.Loading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFFFC6955))
+                    }
+                } else {
+                    AppButton(
+                        text = "Masuk",
+                        onClick = onLoginClick,
+                        variant = AppButtonVariant.CONVERSION_CTA
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Belum punya akun? ",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
+                    )
+                    Text(
+                        text = "Daftar",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color(0xFF3525CD),
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.clickable { onNavigateToRegister() }
+                    )
+                }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Belum punya akun? ",
-                    style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
-                )
-                Text(
-                    text = "Daftar",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFF3525CD),
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.clickable { onNavigateToRegister() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
