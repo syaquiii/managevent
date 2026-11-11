@@ -33,14 +33,15 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
-                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form
+                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form / Checkout / Payment
                     val showBottomBar = (currentRoute != Screen.Onboarding.route) &&
                             (currentRoute != Screen.Login.route) &&
                             (currentRoute != Screen.Register.route) &&
                             (currentRoute != Screen.AgendaForm.route) &&
                             (currentRoute != Screen.KatalogForm.route) &&
                             (currentRoute != Screen.UlasanForm.route) &&
-                            (currentRoute != Screen.Checkout.route)
+                            (currentRoute != Screen.Checkout.route) &&
+                            (currentRoute?.startsWith("payment/") != true)
 
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
@@ -50,12 +51,21 @@ class MainActivity : ComponentActivity() {
                                 AppBottomBar(
                                     currentRoute = currentRoute,
                                     onNavigate = { route ->
-                                        navController.navigate(route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
+                                        if (route == Screen.KatalogList.route) {
+                                            val popped = navController.popBackStack(Screen.KatalogList.route, inclusive = false)
+                                            if (!popped) {
+                                                navController.navigate(Screen.KatalogList.route) {
+                                                    popUpTo(0) { inclusive = true }
+                                                }
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                        } else {
+                                            navController.navigate(route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
                                         }
                                     }
                                 )

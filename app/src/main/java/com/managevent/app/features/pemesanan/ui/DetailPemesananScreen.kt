@@ -55,6 +55,9 @@ import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.pemesanan.data.TransaksiModel
 import java.text.NumberFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
@@ -63,13 +66,15 @@ fun DetailPemesananScreen(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onMarkFinished: () -> Unit = {},
-    onCancelClick: () -> Unit = {}
+    onCancelClick: () -> Unit = {},
+    onNavigateToPayment: (String) -> Unit = {}
 ) {
     DetailPemesananContent(
         detailState = detailState,
         onBackClick = onBackClick,
         onMarkFinished = onMarkFinished,
         onCancelClick = onCancelClick,
+        onNavigateToPayment = onNavigateToPayment,
         modifier = modifier
     )
 }
@@ -81,10 +86,12 @@ fun DetailPemesananContent(
     onBackClick: () -> Unit,
     onMarkFinished: () -> Unit,
     onCancelClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateToPayment: (String) -> Unit = {}
 ) {
     val transaction = (detailState as? UiState.Success)?.data
-    val isOngoing = transaction?.status.equals("Berjalan", ignoreCase = true)
+    val isOngoing = transaction?.status.equals("Berjalan", ignoreCase = true) || transaction?.status.equals("BERJALAN", ignoreCase = true)
+    val isUnpaid = transaction?.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) || transaction?.statusPembayaran.equals("PENDING", ignoreCase = true) || transaction?.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -110,24 +117,46 @@ fun DetailPemesananContent(
             )
         },
         bottomBar = {
-            if (transaction != null && isOngoing) {
-                Surface(color = Surface, shadowElevation = 8.dp) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        AppButton(
-                            text = "Tandai Selesai",
-                            onClick = onMarkFinished,
-                            variant = AppButtonVariant.CONVERSION_CTA
-                        )
-                        AppButton(
-                            text = "Batalkan Pesanan",
-                            onClick = onCancelClick,
-                            variant = AppButtonVariant.SECONDARY_OUTLINED
-                        )
+            if (transaction != null) {
+                if (isUnpaid) {
+                    Surface(color = Surface, shadowElevation = 8.dp) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            AppButton(
+                                text = if (transaction.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)) "Buat Instruksi Pembayaran Baru  →" else "Lanjutkan Pembayaran  →",
+                                onClick = { onNavigateToPayment(transaction.id) },
+                                variant = AppButtonVariant.CONVERSION_CTA
+                            )
+                            AppButton(
+                                text = "Batalkan Pesanan",
+                                onClick = onCancelClick,
+                                variant = AppButtonVariant.SECONDARY_OUTLINED
+                            )
+                        }
+                    }
+                } else if (isOngoing) {
+                    Surface(color = Surface, shadowElevation = 8.dp) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            AppButton(
+                                text = "Tandai Selesai",
+                                onClick = onMarkFinished,
+                                variant = AppButtonVariant.CONVERSION_CTA
+                            )
+                            AppButton(
+                                text = "Batalkan Pesanan",
+                                onClick = onCancelClick,
+                                variant = AppButtonVariant.SECONDARY_OUTLINED
+                            )
+                        }
                     }
                 }
             }
@@ -267,7 +296,7 @@ fun DetailPemesananContent(
                             )
                             OrderDetailRow(
                                 label = "Tanggal pemesanan",
-                                value = order.createdAt
+                                value = formatDateTime(order.createdAt)
                             )
                             OrderDetailRow(
                                 label = "Jumlah tiket",
@@ -366,6 +395,18 @@ private fun OrderDetailRow(
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+private fun formatDateTime(isoString: String): String {
+    if (isoString.isBlank()) return "-"
+    return try {
+        val instant = Instant.parse(isoString)
+        val zdt = instant.atZone(ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm 'WIB'", Locale.forLanguageTag("id-ID"))
+        formatter.format(zdt)
+    } catch (_: Exception) {
+        isoString.take(10)
     }
 }
 

@@ -28,8 +28,10 @@ import com.managevent.app.features.katalog.ui.KatalogDetailScreen
 import com.managevent.app.features.katalog.ui.KatalogFormScreen
 import com.managevent.app.features.katalog.ui.KatalogListScreen
 import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
+import com.managevent.app.features.pemesanan.data.TransaksiModel
 import com.managevent.app.features.pemesanan.ui.CheckoutScreen
 import com.managevent.app.features.pemesanan.ui.DetailPemesananScreen
+import com.managevent.app.features.pemesanan.ui.PaymentScreen
 import com.managevent.app.features.pemesanan.ui.RiwayatPemesananScreen
 import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import com.managevent.app.features.ulasan.ui.UlasanFormScreen
@@ -219,8 +221,9 @@ fun AppNavHost(
 
             LaunchedEffect(checkoutState) {
                 if (checkoutState is UiState.Success) {
+                    val created = (checkoutState as UiState.Success<TransaksiModel>).data
                     pemesananViewModel.consumeCheckoutSuccess()
-                    navController.navigate(Screen.RiwayatPemesanan.route) {
+                    navController.navigate(Screen.Payment.createRoute(created.id)) {
                         popUpTo(Screen.KatalogList.route) { inclusive = false }
                         launchSingleTop = true
                     }
@@ -245,6 +248,33 @@ fun AppNavHost(
                 }
             )
         }
+        composable(Screen.Payment.route) { backStackEntry ->
+            val transaksiId = backStackEntry.arguments?.getString("transaksiId").orEmpty()
+            val pemesananViewModel: PemesananViewModel = viewModel()
+            val detailState by pemesananViewModel.detailState.collectAsStateWithLifecycle()
+            val paymentState by pemesananViewModel.paymentState.collectAsStateWithLifecycle()
+            val loadingMessage by pemesananViewModel.paymentLoadingMessage.collectAsStateWithLifecycle()
+
+            LaunchedEffect(transaksiId) {
+                pemesananViewModel.fetchDetailById(transaksiId)
+            }
+
+            val transaksi = (detailState as? UiState.Success<TransaksiModel>)?.data ?: TransaksiModel(id = transaksiId)
+
+            PaymentScreen(
+                transaksi = transaksi,
+                paymentState = paymentState,
+                paymentLoadingMessage = loadingMessage,
+                onBackClick = { navController.popBackStack() },
+                onPayClick = { bankCode -> pemesananViewModel.payNow(transaksiId, bankCode) },
+                onRenewClick = { bankCode -> pemesananViewModel.renewPayment(transaksiId, bankCode) },
+                onNavigateToDetail = { id ->
+                    navController.navigate(Screen.DetailPemesanan.createRoute(id)) {
+                        popUpTo(Screen.Payment.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.RiwayatPemesanan.route) {
             val pemesananViewModel: PemesananViewModel = viewModel()
             val riwayatState by pemesananViewModel.riwayatState.collectAsStateWithLifecycle()
@@ -265,6 +295,9 @@ fun AppNavHost(
                 },
                 onTransactionClick = { pemesananId ->
                     navController.navigate(Screen.DetailPemesanan.createRoute(pemesananId))
+                },
+                onNavigateToPayment = { transaksiId ->
+                    navController.navigate(Screen.Payment.createRoute(transaksiId))
                 }
             )
         }
@@ -283,7 +316,10 @@ fun AppNavHost(
                 detailState = detailState,
                 onBackClick = { navController.popBackStack() },
                 onMarkFinished = { pemesananViewModel.updateStatus(pemesananId, "Selesai") },
-                onCancelClick = { pemesananViewModel.cancelPemesanan(pemesananId) }
+                onCancelClick = { pemesananViewModel.cancelPemesanan(pemesananId) },
+                onNavigateToPayment = { id ->
+                    navController.navigate(Screen.Payment.createRoute(id))
+                }
             )
         }
 

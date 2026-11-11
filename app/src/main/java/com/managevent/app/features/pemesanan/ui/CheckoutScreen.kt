@@ -72,7 +72,7 @@ private const val MAX_TICKETS_PER_ORDER = 10
 fun CheckoutScreen(
     eventId: String,
     eventState: UiState<EventModel>,
-    checkoutState: UiState<String>,
+    checkoutState: UiState<*>,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onSubmitCheckout: (Int, String, EventModel) -> Unit = { _, _, _ -> }
@@ -103,7 +103,7 @@ fun CheckoutContent(
     eventState: UiState<EventModel>,
     jumlahTiket: Int,
     catatan: String,
-    checkoutState: UiState<String>,
+    checkoutState: UiState<*>,
     onBackClick: () -> Unit,
     onDecreaseTickets: () -> Unit,
     onIncreaseTickets: () -> Unit,

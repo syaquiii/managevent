@@ -70,12 +70,14 @@ fun RiwayatPemesananScreen(
     riwayatState: UiState<List<TransaksiModel>>,
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
-    onTransactionClick: (String) -> Unit = {}
+    onTransactionClick: (String) -> Unit = {},
+    onNavigateToPayment: (String) -> Unit = {}
 ) {
     RiwayatPemesananContent(
         riwayatState = riwayatState,
         onBackClick = onBackClick,
         onTransactionClick = onTransactionClick,
+        onNavigateToPayment = onNavigateToPayment,
         modifier = modifier
     )
 }
@@ -85,7 +87,8 @@ fun RiwayatPemesananContent(
     riwayatState: UiState<List<TransaksiModel>>,
     onTransactionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onBackClick: (() -> Unit)? = null
+    onBackClick: (() -> Unit)? = null,
+    onNavigateToPayment: (String) -> Unit = {}
 ) {
     val pagerState = rememberPagerState(pageCount = { orderStatuses.size })
     val coroutineScope = rememberCoroutineScope()
@@ -141,9 +144,22 @@ fun RiwayatPemesananContent(
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 val status = orderStatuses[page]
+                val allSuccess = (riwayatState as? UiState.Success)?.data.orEmpty()
+                val unpaidOrders = if (page == 0) {
+                    allSuccess.filter {
+                        it.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) ||
+                                it.statusPembayaran.equals("PENDING", ignoreCase = true) ||
+                                it.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+                    }
+                } else emptyList()
+
                 val transactions = when (riwayatState) {
                     is UiState.Success -> riwayatState.data.filter {
-                        it.status.equals(status, ignoreCase = true)
+                        if (page == 0) {
+                            it.status.equals("BERJALAN", ignoreCase = true) || it.status.equals("Berjalan", ignoreCase = true)
+                        } else {
+                            it.status.equals("SELESAI", ignoreCase = true) || it.status.equals("Selesai", ignoreCase = true)
+                        }
                     }
                     else -> emptyList()
                 }
@@ -178,7 +194,16 @@ fun RiwayatPemesananContent(
                             )
                         }
                         is UiState.Success -> {
-                            if (transactions.isEmpty()) {
+                            if (unpaidOrders.isNotEmpty()) {
+                                item {
+                                    UnpaidOrdersBanner(
+                                        unpaidOrders = unpaidOrders,
+                                        onPayClick = onNavigateToPayment
+                                    )
+                                }
+                            }
+
+                            if (transactions.isEmpty() && unpaidOrders.isEmpty()) {
                                 item {
                                     EmptyOrdersState(status = status)
                                 }
@@ -195,6 +220,163 @@ fun RiwayatPemesananContent(
                             }
                             if (status == "Selesai") {
                                 item { ArchiveMemoryBanner() }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnpaidOrdersBanner(
+    unpaidOrders: List<TransaksiModel>,
+    onPayClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFFFF3CD))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFFC107)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = unpaidOrders.size.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Menunggu Pembayaran",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF856404)
+                )
+                Text(
+                    text = "Selesaikan pembayaran untuk mengaktifkan pesanan Anda.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF856404)
+                )
+            }
+        }
+
+        unpaidOrders.forEach { order ->
+            val isExpired = order.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AsyncImage(
+                            model = order.eventImageUrl,
+                            contentDescription = "Poster ${order.eventTitle}",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceContainer),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = order.eventTitle.ifBlank { "Event ${order.eventId.take(8)}" },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Text(
+                                    text = order.eventDate.ifBlank { "Tanggal event" },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = formatRupiah(order.totalHarga),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryContainer
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isExpired) MaterialTheme.colorScheme.errorContainer else Color(0xFFFFF3CD)
+                        ) {
+                            Text(
+                                text = if (isExpired) "Kedaluwarsa" else "Belum Dibayar",
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF856404),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onPayClick(order.id) },
+                            color = if (isExpired) MaterialTheme.colorScheme.errorContainer else PrimaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (isExpired) "Instruksi Baru" else "Lanjutkan Pembayaran",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
                             }
                         }
                     }
