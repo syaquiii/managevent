@@ -33,13 +33,14 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
-                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form
+                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form / Ulasan
                     val showBottomBar = (currentRoute != Screen.Onboarding.route) &&
                             (currentRoute != Screen.Login.route) &&
                             (currentRoute != Screen.Register.route) &&
                             (currentRoute != Screen.AgendaForm.route) &&
                             (currentRoute != Screen.KatalogForm.route) &&
                             (currentRoute != Screen.UlasanForm.route) &&
+                            (currentRoute != Screen.UlasanList.route) && // <-- TAMBAHAN
                             (currentRoute != Screen.Checkout.route)
 
                     Scaffold(
