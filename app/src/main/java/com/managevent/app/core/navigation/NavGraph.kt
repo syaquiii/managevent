@@ -35,7 +35,6 @@ import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import com.managevent.app.features.ulasan.ui.UlasanFormScreen
 import com.managevent.app.features.ulasan.ui.UlasanListScreen
 import com.managevent.app.features.ulasan.viewmodel.UlasanViewModel
-import com.managevent.app.features.wishlist.ui.WishlistDetailScreen
 import com.managevent.app.features.wishlist.ui.WishlistScreen
 import com.managevent.app.features.wishlist.viewmodel.WishlistViewModel
 
@@ -47,6 +46,7 @@ fun AppNavHost(
 ) {
     val authViewModel: AuthViewModel = viewModel()
     val katalogViewModel: KatalogViewModel = viewModel() // Shared ViewModel for Catalog State
+    val pemesananViewModel: PemesananViewModel = viewModel() // Shared ViewModel for Ordering Flow
     val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
     val loginState by authViewModel.loginState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -124,7 +124,6 @@ fun AppNavHost(
         }
         composable(Screen.KatalogDetail.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            // FIXED: Do not create a new ViewModel instance here. Reuse the hoisted katalogViewModel from NavGraph scope!
             val detailState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
 
             LaunchedEffect(eventId) { if (eventId.isNotBlank()) katalogViewModel.fetchEventById(eventId) }
@@ -132,6 +131,7 @@ fun AppNavHost(
             KatalogDetailScreen(
                 detailState = detailState,
                 userRole = currentUser?.role ?: "PEMESAN",
+                currentUserId = currentUser?.id ?: "",
                 onBackClick = { navController.popBackStack() },
                 onEditClick = { id -> 
                     navController.navigate(Screen.KatalogForm.createRoute(id)) 
@@ -147,7 +147,14 @@ fun AppNavHost(
                     }
                     katalogViewModel.fetchEventById(eventId)
                 },
-                onBookClick = { id -> navController.navigate(Screen.Checkout.createRoute(id)) },
+                onBookClick = { id -> 
+                    if (currentUser == null) {
+                        Toast.makeText(context, "Harap masuk (login) terlebih dahulu", Toast.LENGTH_SHORT).show()
+                        navController.navigate(Screen.Login.route)
+                    } else {
+                        navController.navigate(Screen.Checkout.createRoute(id)) 
+                    }
+                },
                 onReviewClick = { id -> navController.navigate(Screen.UlasanList.createRoute(id)) }
             )
         }
@@ -185,8 +192,6 @@ fun AppNavHost(
         // Feature 2: Pemesanan
         composable(Screen.Checkout.route) { backStackEntry ->
             val eventId = backStackEntry.arguments?.getString("eventId").orEmpty()
-            val pemesananViewModel: PemesananViewModel = viewModel()
-
             val checkoutState by pemesananViewModel.checkoutState.collectAsStateWithLifecycle()
             val eventState by katalogViewModel.eventDetailState.collectAsStateWithLifecycle()
 
@@ -209,7 +214,6 @@ fun AppNavHost(
             )
         }
         composable(Screen.RiwayatPemesanan.route) {
-            val pemesananViewModel: PemesananViewModel = viewModel()
             val riwayatState by pemesananViewModel.riwayatState.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) { pemesananViewModel.fetchRiwayat() }
 
@@ -221,15 +225,23 @@ fun AppNavHost(
         }
         composable(Screen.DetailPemesanan.route) { backStackEntry ->
             val pemesananId = backStackEntry.arguments?.getString("pemesananId") ?: ""
-            val pemesananViewModel: PemesananViewModel = viewModel()
             val detailState by pemesananViewModel.detailState.collectAsStateWithLifecycle()
             LaunchedEffect(pemesananId) { if (pemesananId.isNotBlank()) pemesananViewModel.fetchDetailById(pemesananId) }
 
             DetailPemesananScreen(
                 detailState = detailState,
-                onBackClick = { navController.popBackStack() },
-                onMarkFinished = { pemesananViewModel.updateStatus(pemesananId, "Selesai") },
-                onCancelClick = { pemesananViewModel.cancelPemesanan(pemesananId) }
+                onBackClick = { 
+                    pemesananViewModel.fetchRiwayat()
+                    navController.popBackStack() 
+                },
+                onMarkFinished = { 
+                    pemesananViewModel.updateStatus(pemesananId, "Selesai") 
+                },
+                onCancelClick = { 
+                    pemesananViewModel.cancelPemesanan(pemesananId)
+                    pemesananViewModel.fetchRiwayat()
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -252,8 +264,13 @@ fun AppNavHost(
                     navController.navigate(Screen.UlasanForm.createRoute(eventId))
                 },
                 onAddUlasanClick = {
-                    ulasanViewModel.resetForm()
-                    navController.navigate(Screen.UlasanForm.createRoute(eventId))
+                    if (currentUser == null) {
+                        Toast.makeText(context, "Harap masuk (login) untuk menulis ulasan", Toast.LENGTH_SHORT).show()
+                        navController.navigate(Screen.Login.route)
+                    } else {
+                        ulasanViewModel.resetForm()
+                        navController.navigate(Screen.UlasanForm.createRoute(eventId))
+                    }
                 },
                 onBackClick = { navController.popBackStack() }
             )
@@ -307,20 +324,15 @@ fun AppNavHost(
                 totalCount = wishlistViewModel.totalCount,
                 categories = wishlistViewModel.categories,
                 onCategorySelect = wishlistViewModel::onCategorySelected,
-                onEventClick = { eventId ->
-                    navController.navigate(Screen.KatalogDetail.createRoute(eventId))
-                },
+                onEventClick = { eventId -> navController.navigate(Screen.KatalogDetail.createRoute(eventId)) },
                 onFavoriteToggle = { eventId ->
                     wishlistViewModel.removeFromWishlist(eventId, currentUser?.id.orEmpty()) { msg ->
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         katalogViewModel.syncFavoriteStateLocally(eventId, false) // ⬅️ Sinkronisasi Otomatis ke Halaman Beranda!
                     }
-                }
+                },
+                onNavigateToProfile = { navController.navigate(Screen.Profile.route) }
             )
-        }
-        composable(Screen.WishlistDetail.route) { backStackEntry ->
-            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            WishlistDetailScreen(eventId = eventId)
         }
 
         // Feature 5: Agenda

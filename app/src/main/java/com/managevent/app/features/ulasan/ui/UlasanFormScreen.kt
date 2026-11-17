@@ -29,7 +29,8 @@ fun UlasanFormScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditMode) "Edit Ulasan" else "Beri Ulasan", fontWeight = FontWeight.Bold) },
@@ -43,55 +44,63 @@ fun UlasanFormScreen(
         },
         containerColor = BackgroundColor
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.ime)
         ) {
-            Text(text = "Event ID: $eventId", color = Color(0xFF181445), fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(text = "Seberapa puas kamu?", style = MaterialTheme.typography.bodyLarge, color = GrayTextColor)
-            Row(modifier = Modifier.padding(vertical = 8.dp)) {
-                repeat(5) { index ->
-                    val starValue = index + 1
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Bintang $starValue",
-                        tint = if (starValue <= ratingInput) CoralColor else Color.LightGray,
-                        modifier = Modifier.size(48.dp).clickable { onRatingChange(starValue) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedTextField(
-                value = commentInput,
-                onValueChange = onCommentChange,
-                label = { Text("Tuliskan pengalamanmu...") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 4,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = IndigoTextColor,
-                    focusedLabelColor = IndigoTextColor,
-                    unfocusedContainerColor = Color(0xFFF6F2FF),
-                    focusedContainerColor = Color(0xFFF6F2FF)
-                )
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = onSubmit,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = IndigoTextColor)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Text(if (isEditMode) "Simpan Perubahan" else "Kirim Ulasan", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(text = "Event ID: $eventId", color = Color(0xFF181445), fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(text = "Seberapa puas kamu?", style = MaterialTheme.typography.bodyLarge, color = GrayTextColor)
+                Row(modifier = Modifier.padding(vertical = 8.dp)) {
+                    repeat(5) { index ->
+                        val starValue = index + 1
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Bintang $starValue",
+                            tint = if (starValue <= ratingInput) CoralColor else Color.LightGray,
+                            modifier = Modifier.size(48.dp).clickable { onRatingChange(starValue) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                OutlinedTextField(
+                    value = commentInput,
+                    onValueChange = onCommentChange,
+                    label = { Text("Tuliskan pengalamanmu...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = IndigoTextColor,
+                        focusedLabelColor = IndigoTextColor,
+                        unfocusedContainerColor = Color(0xFFF6F2FF),
+                        focusedContainerColor = Color(0xFFF6F2FF)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = onSubmit,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IndigoTextColor)
+                ) {
+                    Text(if (isEditMode) "Simpan Perubahan" else "Kirim Ulasan", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                }
+                
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }

@@ -4,15 +4,19 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -198,6 +202,7 @@ fun KatalogFormContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFFFAFBFD),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -221,188 +226,196 @@ fun KatalogFormContent(
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .windowInsetsPadding(WindowInsets.ime)
         ) {
-            if (!errorMessage.isNullOrEmpty()) {
-                Text(
-                    text = errorMessage,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = onTitleChange,
-                label = { Text("Judul Event / Paket") },
-                placeholder = { Text("Contoh: Pameran Pernikahan Nusantara") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
-            )
-
-            // Category Dropdown
-            ExposedDropdownMenuBox(
-                expanded = categoryExpanded,
-                onExpandedChange = { categoryExpanded = !categoryExpanded },
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                if (!errorMessage.isNullOrEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+
                 OutlinedTextField(
-                    value = category,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Kategori") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    value = title,
+                    onValueChange = onTitleChange,
+                    label = { Text("Judul Event / Paket") },
+                    placeholder = { Text("Contoh: Pameran Pernikahan Nusantara") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
                 )
-                ExposedDropdownMenu(
+
+                // Category Dropdown
+                ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
-                    onDismissRequest = { categoryExpanded = false }
+                    onExpandedChange = { categoryExpanded = !categoryExpanded },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    categories.forEach { item ->
-                        DropdownMenuItem(
-                            text = { Text(item) },
-                            onClick = {
-                                onCategoryChange(item)
-                                categoryExpanded = false
-                            }
-                        )
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Kategori") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        categories.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    onCategoryChange(item)
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
-            }
 
-            OutlinedTextField(
-                value = date,
-                onValueChange = onDateChange,
-                label = { Text("Tanggal Pelaksanaan") },
-                placeholder = { Text("Contoh: 18 Juli 2026") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
-            )
-
-            OutlinedTextField(
-                value = location,
-                onValueChange = onLocationChange,
-                label = { Text("Lokasi Tempat") },
-                placeholder = { Text("Contoh: Jakarta Convention Center") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
-            )
-
-            OutlinedTextField(
-                value = priceInput,
-                onValueChange = onPriceChange,
-                label = { Text("Harga (Rp)") },
-                placeholder = { Text("Contoh: 150000") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
-            )
-
-            // Image Picker Section
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Poster Gambar",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
-                )
-                
-                Row(
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = onDateChange,
+                    label = { Text("Tanggal Pelaksanaan") },
+                    placeholder = { Text("Contoh: 18 Juli 2026") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                )
+
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = onLocationChange,
+                    label = { Text("Lokasi Tempat") },
+                    placeholder = { Text("Contoh: Jakarta Convention Center") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                )
+
+                OutlinedTextField(
+                    value = priceInput,
+                    onValueChange = onPriceChange,
+                    label = { Text("Harga (Rp)") },
+                    placeholder = { Text("Contoh: 150000") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                )
+
+                // Image Picker Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .height(120.dp)
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
+                    Text(
+                        text = "Poster Gambar",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val imageToLoad = selectedImageUri ?: existingImageUrl
-                        
-                        if (imageToLoad != null && imageToLoad.toString().isNotBlank()) {
-                            AsyncImage(
-                                model = imageToLoad,
-                                contentDescription = "Poster",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            // Placeholder
-                            Surface(
-                                modifier = Modifier.fillMaxSize(),
-                                color = Color(0xFFE2DFFF),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "Tidak Ada Gambar",
-                                        style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFF3525CD))
-                                    )
+                        Box(
+                            modifier = Modifier
+                                .height(120.dp)
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                        ) {
+                            val imageToLoad = selectedImageUri ?: existingImageUrl
+                            
+                            if (imageToLoad != null && imageToLoad.toString().isNotBlank()) {
+                                AsyncImage(
+                                    model = imageToLoad,
+                                    contentDescription = "Poster",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                // Placeholder
+                                Surface(
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = Color(0xFFE2DFFF),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "Tidak Ada Gambar",
+                                            style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFF3525CD))
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                    
-                    OutlinedButton(
-                        onClick = onPickImageClick,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Text("Pilih Gambar")
+                        
+                        OutlinedButton(
+                            onClick = onPickImageClick,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(48.dp)
+                        ) {
+                            Text("Pilih Gambar")
+                        }
                     }
                 }
-            }
 
-            OutlinedTextField(
-                value = description,
-                onValueChange = onDescriptionChange,
-                label = { Text("Deskripsi Event & Paket") },
-                placeholder = { Text("Tuliskan deskripsi dan detail keunggulan paket...") },
-                minLines = 3,
-                maxLines = 5,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onSubmit,
-                enabled = !isUploading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
-            ) {
-                Text(
-                    text = if (isUploading) "Menyimpan..." else "Simpan Event",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text("Deskripsi Event & Paket") },
+                    placeholder = { Text("Tuliskan deskripsi dan detail keunggulan paket...") },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = onSubmit,
+                    enabled = !isUploading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
+                ) {
+                    Text(
+                        text = if (isUploading) "Menyimpan..." else "Simpan Event",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }

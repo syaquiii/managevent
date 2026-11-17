@@ -6,11 +6,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -118,6 +121,7 @@ fun CheckoutContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -155,228 +159,234 @@ fun CheckoutContent(
             }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .windowInsetsPadding(WindowInsets.ime)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceContainerLow)
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(PrimaryFixed),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(SurfaceContainerLow)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = PrimaryContainer,
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Langkah Terakhir",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Konfirmasi detail tiket sebelum melanjutkan",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "2/2",
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(SurfaceContainerHighest)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    color = PrimaryContainer,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            when (eventState) {
-                UiState.Idle, UiState.Loading -> {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp),
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryFixed),
                         contentAlignment = Alignment.Center
                     ) {
-                        LoadingScreen()
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(19.dp)
+                        )
                     }
-                }
-                is UiState.Error -> {
-                    Text(
-                        text = eventState.message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                is UiState.Success -> {
-                    EventSummaryCard(event = eventState.data)
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Jumlah Peserta",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Maksimal 10 tiket per transaksi",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                TicketQuantityButton(
-                                    icon = Icons.Default.Remove,
-                                    description = "Kurangi jumlah tiket",
-                                    enabled = jumlahTiket > 1,
-                                    onClick = onDecreaseTickets,
-                                    backgroundColor = SurfaceContainerLow,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = jumlahTiket.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                TicketQuantityButton(
-                                    icon = Icons.Default.Add,
-                                    description = "Tambah jumlah tiket",
-                                    enabled = jumlahTiket < MAX_TICKETS_PER_ORDER,
-                                    onClick = onIncreaseTickets,
-                                    backgroundColor = PrimaryFixed,
-                                    tint = PrimaryContainer
-                                )
-                            }
-                        }
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Catatan",
+                            text = "Langkah Terakhir",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
-                        OutlinedTextField(
-                            value = catatan,
-                            onValueChange = onNotesChange,
-                            placeholder = {
-                                Text("Tambahkan catatan khusus (opsional)")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 3,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = SurfaceContainerLow,
-                                unfocusedContainerColor = SurfaceContainerLow,
-                                focusedBorderColor = Primary,
-                                unfocusedBorderColor = Color.Transparent
-                            )
+                        Text(
+                            text = "Konfirmasi detail tiket sebelum melanjutkan",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Text(
+                        text = "2/2",
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(SurfaceContainerHighest)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = PrimaryContainer,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                when (eventState) {
+                    UiState.Idle, UiState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Ringkasan Biaya",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            LoadingScreen()
+                        }
+                    }
+                    is UiState.Error -> {
+                        Text(
+                            text = eventState.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    is UiState.Success -> {
+                        EventSummaryCard(event = eventState.data)
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Harga Tiket ($jumlahTiket × ${formatRupiah(eventState.data.price)})",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = formatRupiah(totalHarga),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            androidx.compose.material3.HorizontalDivider(color = SurfaceContainerHighest)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column {
                                     Text(
-                                        text = "Total Harga",
+                                        text = "Jumlah Peserta",
                                         style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "Termasuk pajak & layanan",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = "Maksimal 10 tiket per transaksi",
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Text(
-                                    text = formatRupiah(totalHarga),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryContainer
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    TicketQuantityButton(
+                                        icon = Icons.Default.Remove,
+                                        description = "Kurangi jumlah tiket",
+                                        enabled = jumlahTiket > 1,
+                                        onClick = onDecreaseTickets,
+                                        backgroundColor = SurfaceContainerLow,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = jumlahTiket.toString(),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    TicketQuantityButton(
+                                        icon = Icons.Default.Add,
+                                        description = "Tambah jumlah tiket",
+                                        enabled = jumlahTiket < MAX_TICKETS_PER_ORDER,
+                                        onClick = onIncreaseTickets,
+                                        backgroundColor = PrimaryFixed,
+                                        tint = PrimaryContainer
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    when (checkoutState) {
-                        is UiState.Error -> Text(
-                            text = checkoutState.message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        else -> Unit
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Catatan",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            OutlinedTextField(
+                                value = catatan,
+                                onValueChange = onNotesChange,
+                                placeholder = {
+                                    Text("Tambahkan catatan khusus (opsional)")
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                maxLines = 3,
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = SurfaceContainerLow,
+                                    unfocusedContainerColor = SurfaceContainerLow,
+                                    focusedBorderColor = Primary,
+                                    unfocusedBorderColor = Color.Transparent
+                                )
+                            )
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = "Ringkasan Biaya",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Harga Tiket ($jumlahTiket × ${formatRupiah(eventState.data.price)})",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = formatRupiah(totalHarga),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                androidx.compose.material3.HorizontalDivider(color = SurfaceContainerHighest)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Total Harga",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Termasuk pajak & layanan",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = formatRupiah(totalHarga),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        when (checkoutState) {
+                            is UiState.Error -> Text(
+                                text = checkoutState.message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            else -> Unit
+                        }
+                        Spacer(modifier = Modifier.height(30.dp))
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }

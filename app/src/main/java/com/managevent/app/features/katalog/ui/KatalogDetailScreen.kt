@@ -65,6 +65,7 @@ import com.managevent.app.features.katalog.data.EventModel
 fun KatalogDetailScreen(
     detailState: UiState<EventModel>,
     userRole: String = "",
+    currentUserId: String = "",
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onEditClick: (String) -> Unit = {},
@@ -76,6 +77,7 @@ fun KatalogDetailScreen(
     KatalogDetailContent(
         detailState = detailState,
         userRole = userRole,
+        currentUserId = currentUserId,
         onBackClick = onBackClick,
         onEditClick = onEditClick,
         onDeleteConfirm = onDeleteConfirm,
@@ -91,6 +93,7 @@ fun KatalogDetailScreen(
 fun KatalogDetailContent(
     detailState: UiState<EventModel>,
     userRole: String,
+    currentUserId: String,
     onBackClick: () -> Unit,
     onEditClick: (String) -> Unit,
     onDeleteConfirm: (String) -> Unit,
@@ -148,18 +151,21 @@ fun KatalogDetailContent(
                 actions = {
                     if (userRole == "VENDOR" && detailState is UiState.Success) {
                         val event = detailState.data
-                        IconButton(onClick = { onEditClick(event.id) }) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Event"
-                            )
-                        }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Hapus Event",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                        // Tampilkan tombol Hapus/Edit HANYA jika event ini milik vendor yang sedang login!
+                        if (event.vendorId == currentUserId) {
+                            IconButton(onClick = { onEditClick(event.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Event"
+                                )
+                            }
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Hapus Event",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 },
@@ -447,6 +453,7 @@ fun KatalogDetailContentPreview() {
                 )
             ),
             userRole = "VENDOR",
+            currentUserId = "",
             onBackClick = {},
             onEditClick = {},
             onDeleteConfirm = {},

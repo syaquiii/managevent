@@ -7,6 +7,8 @@ import kotlinx.serialization.Transient
 @Serializable
 data class EventModel(
     val id: String = "",
+    @SerialName("vendor_id")
+    val vendorId: String? = null,
     val title: String = "",
     val description: String = "",
     val category: String = "",
