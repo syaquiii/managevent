@@ -98,10 +98,11 @@ fun PaymentScreen(
     transaksi: TransaksiModel,
     paymentState: UiState<TransaksiModel>,
     paymentLoadingMessage: String,
-    onBackClick: () -> Unit,
-    onPayClick: (bankCode: String) -> Unit,
-    onRenewClick: (bankCode: String) -> Unit,
-    onNavigateToDetail: (transaksiId: String) -> Unit,
+    onBackClick: () -> Unit = {},
+    onPayClick: (bankCode: String) -> Unit = {},
+    onRenewClick: (bankCode: String) -> Unit = {},
+    onCancelClick: () -> Unit = {},
+    onNavigateToDetail: (transaksiId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedBank by remember { mutableStateOf(bankList.firstOrNull { it.code == transaksi.metodePembayaran } ?: bankList.first()) }
@@ -165,7 +166,8 @@ fun PaymentScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (isExpired) {
                             AppButton(
@@ -181,6 +183,11 @@ fun PaymentScreen(
                                 variant = AppButtonVariant.CONVERSION_CTA
                             )
                         }
+                        AppButton(
+                            text = "Batalkan Pembayaran",
+                            onClick = onCancelClick,
+                            variant = AppButtonVariant.SECONDARY_OUTLINED
+                        )
                     }
                 }
             }

@@ -166,12 +166,29 @@ class PemesananViewModel(
                 val currentDetail = (_detailState.value as? UiState.Success)?.data
                 if (currentDetail != null) {
                     _detailState.value = UiState.Success(currentDetail.copy(status = "DIBATALKAN"))
-                    fetchRiwayat()
                 }
+                fetchRiwayat()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 _detailState.value = UiState.Error(e.localizedMessage ?: "Gagal membatalkan pesanan")
+            }
+        }
+    }
+
+    fun cancelWithReason(transaksiId: String, reason: String) {
+        viewModelScope.launch {
+            try {
+                repository.batalkanPemesananWithReason(transaksiId, reason)
+                val currentDetail = (_detailState.value as? UiState.Success)?.data
+                if (currentDetail != null) {
+                    _detailState.value = UiState.Success(currentDetail.copy(status = "DIBATALKAN"))
+                }
+                fetchRiwayat()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _detailState.value = UiState.Error(e.localizedMessage ?: "Gagal memproses refund")
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.managevent.app.features.pemesanan.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,12 +28,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +74,7 @@ fun DetailPemesananScreen(
     onBackClick: () -> Unit = {},
     onMarkFinished: () -> Unit = {},
     onCancelClick: () -> Unit = {},
+    onCancelWithReason: (String) -> Unit = {},
     onNavigateToPayment: (String) -> Unit = {}
 ) {
     DetailPemesananContent(
@@ -74,6 +82,7 @@ fun DetailPemesananScreen(
         onBackClick = onBackClick,
         onMarkFinished = onMarkFinished,
         onCancelClick = onCancelClick,
+        onCancelWithReason = onCancelWithReason,
         onNavigateToPayment = onNavigateToPayment,
         modifier = modifier
     )
@@ -87,11 +96,16 @@ fun DetailPemesananContent(
     onMarkFinished: () -> Unit,
     onCancelClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onCancelWithReason: (String) -> Unit = {},
     onNavigateToPayment: (String) -> Unit = {}
 ) {
     val transaction = (detailState as? UiState.Success)?.data
     val isOngoing = transaction?.status.equals("Berjalan", ignoreCase = true) || transaction?.status.equals("BERJALAN", ignoreCase = true)
     val isUnpaid = transaction?.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) || transaction?.statusPembayaran.equals("PENDING", ignoreCase = true) || transaction?.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+
+    var showRefundDialog by remember { mutableStateOf(false) }
+    val refundReasons = listOf("Perubahan jadwal / acara", "Salah memilih jenis tiket", "Kendala pribadi / darurat", "Lainnya")
+    var selectedReason by remember { mutableStateOf(refundReasons[0]) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -152,13 +166,69 @@ fun DetailPemesananContent(
                                 variant = AppButtonVariant.CONVERSION_CTA
                             )
                             AppButton(
-                                text = "Batalkan Pesanan",
-                                onClick = onCancelClick,
+                                text = "Batalkan Pesanan (Refund)",
+                                onClick = { showRefundDialog = true },
                                 variant = AppButtonVariant.SECONDARY_OUTLINED
                             )
                         }
                     }
                 }
+            }
+
+            if (showRefundDialog) {
+                AlertDialog(
+                    onDismissRequest = { showRefundDialog = false },
+                    title = {
+                        Text(
+                            text = "Alasan Pembatalan & Refund",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Silakan pilih alasan pembatalan pesanan Anda:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            refundReasons.forEach { reason ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { selectedReason = reason }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedReason == reason,
+                                        onClick = { selectedReason = reason }
+                                    )
+                                    Text(
+                                        text = reason,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        AppButton(
+                            text = "Ajukan Refund",
+                            onClick = {
+                                showRefundDialog = false
+                                onCancelWithReason(selectedReason)
+                            },
+                            variant = AppButtonVariant.CONVERSION_CTA
+                        )
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showRefundDialog = false }) {
+                            Text("Batal")
+                        }
+                    }
+                )
             }
         }
     ) { innerPadding ->

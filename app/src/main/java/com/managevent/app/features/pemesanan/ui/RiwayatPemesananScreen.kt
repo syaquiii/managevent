@@ -147,19 +147,22 @@ fun RiwayatPemesananContent(
                 val allSuccess = (riwayatState as? UiState.Success)?.data.orEmpty()
                 val unpaidOrders = if (page == 0) {
                     allSuccess.filter {
-                        it.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) ||
-                                it.statusPembayaran.equals("PENDING", ignoreCase = true) ||
-                                it.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+                        !it.status.equals("DIBATALKAN", ignoreCase = true) &&
+                                (it.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) ||
+                                        it.status.equals("Menunggu Pembayaran", ignoreCase = true) ||
+                                        it.statusPembayaran.equals("PENDING", ignoreCase = true) ||
+                                        it.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true))
                     }
                 } else emptyList()
 
                 val transactions = when (riwayatState) {
                     is UiState.Success -> riwayatState.data.filter {
-                        if (page == 0) {
-                            it.status.equals("BERJALAN", ignoreCase = true) || it.status.equals("Berjalan", ignoreCase = true)
-                        } else {
-                            it.status.equals("SELESAI", ignoreCase = true) || it.status.equals("Selesai", ignoreCase = true)
-                        }
+                        !it.status.equals("DIBATALKAN", ignoreCase = true) &&
+                                if (page == 0) {
+                                    it.status.equals("BERJALAN", ignoreCase = true) || it.status.equals("Berjalan", ignoreCase = true)
+                                } else {
+                                    it.status.equals("SELESAI", ignoreCase = true) || it.status.equals("Selesai", ignoreCase = true)
+                                }
                     }
                     else -> emptyList()
                 }

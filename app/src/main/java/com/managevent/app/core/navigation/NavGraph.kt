@@ -240,6 +240,11 @@ fun AppNavHost(
                 onBackClick = { navController.popBackStack() },
                 onPayClick = { bankCode -> pemesananViewModel.payNow(transaksiId, bankCode) },
                 onRenewClick = { bankCode -> pemesananViewModel.renewPayment(transaksiId, bankCode) },
+                onCancelClick = {
+                    pemesananViewModel.cancelPemesanan(transaksiId)
+                    pemesananViewModel.fetchRiwayat()
+                    navController.popBackStack()
+                },
                 onNavigateToDetail = { id ->
                     navController.navigate(Screen.DetailPemesanan.createRoute(id)) {
                         popUpTo(Screen.Payment.route) { inclusive = true }
@@ -274,6 +279,11 @@ fun AppNavHost(
                 },
                 onCancelClick = { 
                     pemesananViewModel.cancelPemesanan(pemesananId)
+                    pemesananViewModel.fetchRiwayat()
+                    navController.popBackStack()
+                },
+                onCancelWithReason = { reason ->
+                    pemesananViewModel.cancelWithReason(pemesananId, reason)
                     pemesananViewModel.fetchRiwayat()
                     navController.popBackStack()
                 },

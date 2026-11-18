@@ -279,6 +279,7 @@ class PemesananRepository {
         try {
             client.postgrest["transaksi"].update({
                 set("status", "DIBATALKAN")
+                set("status_pembayaran", "DIBATALKAN")
             }) {
                 filter {
                     eq("id", transaksiId)
@@ -286,6 +287,29 @@ class PemesananRepository {
                 }
             }
             UiState.Success("Pemesanan berhasil dibatalkan")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
+        }
+    }
+
+    suspend fun batalkanPemesananWithReason(transaksiId: String, reason: String): UiState<String> = withContext(Dispatchers.IO) {
+        val userId = currentUserId()
+            ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
+
+        try {
+            client.postgrest["transaksi"].update({
+                set("status", "DIBATALKAN")
+                set("status_pembayaran", "DIBATALKAN")
+                set("catatan", "Dibatalkan/Refund - Alasan: $reason")
+            }) {
+                filter {
+                    eq("id", transaksiId)
+                    eq("user_id", userId)
+                }
+            }
+            UiState.Success("Pengajuan refund berhasil diproses dan pesanan dibatalkan")
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
