@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Pastikan kolom role ada jika tabel sudah dibuat sebelumnya
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'PEMESAN';
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -61,6 +60,7 @@ CREATE TRIGGER on_auth_user_created
 -- 2. TABEL EVENTS (Fitur Katalog - Muhammad Abdul Fatah)
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    vendor_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
     category TEXT,
@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS public.events (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- BUG FIX: Menambahkan Relasi Vendor_ID Agar Edit/Hapus Aman!
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public events are viewable by everyone" ON public.events;
@@ -79,15 +82,15 @@ CREATE POLICY "Public events are viewable by everyone"
 
 DROP POLICY IF EXISTS "Events are insertable by authenticated users" ON public.events;
 CREATE POLICY "Events are insertable by authenticated users"
-    ON public.events FOR INSERT WITH CHECK (true);
+    ON public.events FOR INSERT WITH CHECK (auth.uid() = vendor_id);
 
 DROP POLICY IF EXISTS "Events are updatable by authenticated users" ON public.events;
 CREATE POLICY "Events are updatable by authenticated users"
-    ON public.events FOR UPDATE USING (true);
+    ON public.events FOR UPDATE USING (auth.uid() = vendor_id);
 
 DROP POLICY IF EXISTS "Events are deletable by authenticated users" ON public.events;
 CREATE POLICY "Events are deletable by authenticated users"
-    ON public.events FOR DELETE USING (true);
+    ON public.events FOR DELETE USING (auth.uid() = vendor_id);
 
 
 -- 3. TABEL TRANSAKSI (Fitur Pemesanan - Muhammad Darren Achilles Setiawan)
@@ -101,6 +104,8 @@ CREATE TABLE IF NOT EXISTS public.transaksi (
     status TEXT DEFAULT 'Berjalan', -- 'Berjalan' atau 'Selesai'
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS catatan TEXT;
 
 ALTER TABLE public.transaksi ENABLE ROW LEVEL SECURITY;
 
@@ -182,6 +187,8 @@ CREATE TABLE IF NOT EXISTS public.agenda (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.agenda ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE public.agenda ENABLE ROW LEVEL SECURITY;
 

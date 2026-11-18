@@ -5,6 +5,8 @@ import com.managevent.app.core.util.UiState
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class UlasanRepository {
     private val client = SupabaseClientProvider.client
@@ -22,10 +24,19 @@ class UlasanRepository {
         }
     }
 
-    suspend fun addUlasan(ulasan: UlasanModel): UiState<String> {
+    suspend fun addUlasan(eventId: String, userId: String, username: String, rating: Int, comment: String): UiState<String> {
         return withContext(Dispatchers.IO) {
             try {
-                client.postgrest["ulasan"].insert(ulasan)
+                // Ubah mapOf menjadi buildJsonObject biar servernya ngerti
+                val newUlasan = buildJsonObject {
+                    put("event_id", eventId)
+                    put("user_id", userId)
+                    put("username", username)
+                    put("rating", rating)
+                    put("comment", comment)
+                }
+
+                client.postgrest["ulasan"].insert(newUlasan)
                 UiState.Success("Ulasan berhasil dikirim")
             } catch (e: Exception) {
                 UiState.Error(e.localizedMessage ?: "Gagal mengirim ulasan")
