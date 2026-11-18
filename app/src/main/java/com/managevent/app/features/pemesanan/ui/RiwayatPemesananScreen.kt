@@ -354,27 +354,31 @@ private fun UnpaidOrdersBanner(
                             )
                         }
 
-                        Surface(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onPayClick(order.id) },
-                            color = if (isExpired) MaterialTheme.colorScheme.errorContainer else PrimaryContainer
+                        androidx.compose.material3.Button(
+                            onClick = { 
+                                if (order.id.isNotBlank()) {
+                                    onPayClick(order.id)
+                                }
+                            },
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = if (isExpired) MaterialTheme.colorScheme.errorContainer else PrimaryContainer,
+                                contentColor = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color.White
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
                                     text = if (isExpired) "Instruksi Baru" else "Lanjutkan Pembayaran",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color.White,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = if (isExpired) MaterialTheme.colorScheme.onErrorContainer else Color.White,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }

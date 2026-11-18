@@ -28,8 +28,10 @@ import com.managevent.app.features.katalog.ui.KatalogDetailScreen
 import com.managevent.app.features.katalog.ui.KatalogFormScreen
 import com.managevent.app.features.katalog.ui.KatalogListScreen
 import com.managevent.app.features.katalog.viewmodel.KatalogViewModel
+import com.managevent.app.features.pemesanan.data.TransaksiModel
 import com.managevent.app.features.pemesanan.ui.CheckoutScreen
 import com.managevent.app.features.pemesanan.ui.DetailPemesananScreen
+import com.managevent.app.features.pemesanan.ui.PaymentScreen
 import com.managevent.app.features.pemesanan.ui.RiwayatPemesananScreen
 import com.managevent.app.features.pemesanan.viewmodel.PemesananViewModel
 import com.managevent.app.features.ulasan.ui.UlasanFormScreen
@@ -198,8 +200,12 @@ fun AppNavHost(
             LaunchedEffect(eventId) { katalogViewModel.fetchEventById(eventId) }
             LaunchedEffect(checkoutState) {
                 if (checkoutState is UiState.Success) {
+                    val created = (checkoutState as UiState.Success).data
                     pemesananViewModel.consumeCheckoutSuccess()
-                    navController.navigate(Screen.RiwayatPemesanan.route) { popUpTo(Screen.KatalogList.route) { inclusive = false }; launchSingleTop = true }
+                    navController.navigate(Screen.Payment.createRoute(created.id)) {
+                        popUpTo(Screen.KatalogList.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
                 }
             }
 
@@ -213,6 +219,34 @@ fun AppNavHost(
                 }
             )
         }
+        composable(Screen.Payment.route) { backStackEntry ->
+            val transaksiId = backStackEntry.arguments?.getString("transaksiId").orEmpty()
+            val detailState by pemesananViewModel.detailState.collectAsStateWithLifecycle()
+            val paymentState by pemesananViewModel.paymentState.collectAsStateWithLifecycle()
+            val loadingMessage by pemesananViewModel.paymentLoadingMessage.collectAsStateWithLifecycle()
+
+            LaunchedEffect(transaksiId) {
+                if (transaksiId.isNotBlank()) {
+                    pemesananViewModel.fetchDetailById(transaksiId)
+                }
+            }
+
+            val transaksi = (detailState as? UiState.Success)?.data as? TransaksiModel ?: TransaksiModel(id = transaksiId)
+
+            PaymentScreen(
+                transaksi = transaksi,
+                paymentState = paymentState,
+                paymentLoadingMessage = loadingMessage,
+                onBackClick = { navController.popBackStack() },
+                onPayClick = { bankCode -> pemesananViewModel.payNow(transaksiId, bankCode) },
+                onRenewClick = { bankCode -> pemesananViewModel.renewPayment(transaksiId, bankCode) },
+                onNavigateToDetail = { id ->
+                    navController.navigate(Screen.DetailPemesanan.createRoute(id)) {
+                        popUpTo(Screen.Payment.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.RiwayatPemesanan.route) {
             val riwayatState by pemesananViewModel.riwayatState.collectAsStateWithLifecycle()
             LaunchedEffect(Unit) { pemesananViewModel.fetchRiwayat() }
@@ -220,7 +254,8 @@ fun AppNavHost(
             RiwayatPemesananScreen(
                 riwayatState = riwayatState,
                 onBackClick = { val popped = navController.popBackStack(); if (!popped) navController.navigate(Screen.KatalogList.route) { popUpTo(Screen.KatalogList.route) { inclusive = true } } },
-                onTransactionClick = { pemesananId -> navController.navigate(Screen.DetailPemesanan.createRoute(pemesananId)) }
+                onTransactionClick = { pemesananId -> navController.navigate(Screen.DetailPemesanan.createRoute(pemesananId)) },
+                onNavigateToPayment = { transaksiId -> navController.navigate(Screen.Payment.createRoute(transaksiId)) }
             )
         }
         composable(Screen.DetailPemesanan.route) { backStackEntry ->
@@ -241,7 +276,8 @@ fun AppNavHost(
                     pemesananViewModel.cancelPemesanan(pemesananId)
                     pemesananViewModel.fetchRiwayat()
                     navController.popBackStack()
-                }
+                },
+                onNavigateToPayment = { id -> navController.navigate(Screen.Payment.createRoute(id)) }
             )
         }
 

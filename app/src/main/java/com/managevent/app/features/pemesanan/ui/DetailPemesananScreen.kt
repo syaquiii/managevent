@@ -401,12 +401,24 @@ private fun OrderDetailRow(
 private fun formatDateTime(isoString: String): String {
     if (isoString.isBlank()) return "-"
     return try {
-        val instant = Instant.parse(isoString)
+        val normalized = isoString.trim().replace(" ", "T")
+        val instant = Instant.parse(normalized)
         val zdt = instant.atZone(ZoneId.systemDefault())
         val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm 'WIB'", Locale.forLanguageTag("id-ID"))
         formatter.format(zdt)
     } catch (_: Exception) {
-        isoString.take(10)
+        try {
+            val parts = isoString.trim().split("T", " ")
+            val datePart = parts.getOrNull(0) ?: ""
+            val timePart = parts.getOrNull(1)?.take(5) ?: ""
+            if (datePart.isNotBlank() && timePart.isNotBlank()) {
+                "$datePart, $timePart WIB"
+            } else {
+                isoString
+            }
+        } catch (_: Exception) {
+            isoString
+        }
     }
 }
 
