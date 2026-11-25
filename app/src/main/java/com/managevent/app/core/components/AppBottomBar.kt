@@ -25,7 +25,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.managevent.app.core.navigation.Screen
+import com.managevent.app.core.theme.CardSurface
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.PrimaryFixed
 
 data class BottomNavItem(
     val title: String,
@@ -75,7 +79,7 @@ fun AppBottomBar(
 
     NavigationBar(
         modifier = modifier,
-        containerColor = Color.White,
+        containerColor = CardSurface,
         tonalElevation = 8.dp
     ) {
         items.forEach { item ->
@@ -102,11 +106,11 @@ fun AppBottomBar(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF3F51B5),
-                    selectedTextColor = Color(0xFF3F51B5),
-                    indicatorColor = Color(0xFFEDE7F6),
-                    unselectedIconColor = Color(0xFF757575),
-                    unselectedTextColor = Color(0xFF757575)
+                    selectedIconColor = PrimaryContainer,
+                    selectedTextColor = PrimaryContainer,
+                    indicatorColor = PrimaryFixed,
+                    unselectedIconColor = OnSurfaceVariant,
+                    unselectedTextColor = OnSurfaceVariant
                 )
             )
         }

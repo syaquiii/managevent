@@ -50,10 +50,11 @@ Setiap anggota bertanggung jawab penuh atas modul fitur independen di `com.manag
 ### 2. Pemesanan & Riwayat Transaksi (`features/pemesanan/`) — *Muhammad Darren Achilles Setiawan*
 - **Tampilan List**: `HorizontalPager` (ViewPager tab "Berjalan" & "Selesai") + `LazyColumn`.
 - **Layar Navigasi**:
-  1. `CheckoutScreen` (form checkout: pilih paket, tanggal, jumlah peserta, catatan)
-  2. `RiwayatPemesananScreen` (`HorizontalPager` tab Berjalan/Selesai)
-  3. `DetailPemesananScreen` (rincian pesanan, opsi pembatalan/update status)
-- **Supabase CRUD**: Read, Insert (checkout), Update (status), Delete (batal).
+  1. `CheckoutScreen` (form checkout: pilih paket, jumlah peserta, catatan)
+  2. `PaymentScreen` (instruksi Virtual Account, countdown pembayaran, proses bayar / batalkan)
+  3. `RiwayatPemesananScreen` (`HorizontalPager` tab Berjalan/Selesai & banner menunggu pembayaran)
+  4. `DetailPemesananScreen` (rincian pesanan, opsi pembatalan/refund/update status)
+- **Supabase CRUD**: Read, Insert (checkout), Update (pembayaran & status), Delete (batal pesanan belum dibayar).
 
 ---
 

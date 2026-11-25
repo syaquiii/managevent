@@ -1,5 +1,8 @@
 package com.managevent.app.features.pemesanan.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,14 +62,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
+import com.managevent.app.core.components.LoadingScreen
+import com.managevent.app.core.theme.ManageventTheme
 import com.managevent.app.core.theme.Primary
 import com.managevent.app.core.theme.PrimaryContainer
 import com.managevent.app.core.theme.PrimaryFixed
@@ -73,11 +78,12 @@ import com.managevent.app.core.theme.Surface
 import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatCountdown
+import com.managevent.app.core.util.formatRupiah
+import com.managevent.app.core.util.parseIsoInstant
 import com.managevent.app.features.pemesanan.data.TransaksiModel
 import kotlinx.coroutines.delay
-import java.text.NumberFormat
 import java.time.Instant
-import java.util.Locale
 
 data class BankOption(
     val code: String,
@@ -92,41 +98,67 @@ private val bankList = listOf(
     BankOption("mandiri_va", "Mandiri Virtual Account", "89022")
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentScreen(
-    transaksi: TransaksiModel,
+    detailState: UiState<TransaksiModel>,
     paymentState: UiState<TransaksiModel>,
     paymentLoadingMessage: String,
+    modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onPayClick: (bankCode: String) -> Unit = {},
     onRenewClick: (bankCode: String) -> Unit = {},
     onCancelClick: () -> Unit = {},
-    onNavigateToDetail: (transaksiId: String) -> Unit = {},
+    onNavigateToDetail: (transaksiId: String) -> Unit = {}
+) {
+    PaymentContent(
+        detailState = detailState,
+        paymentState = paymentState,
+        paymentLoadingMessage = paymentLoadingMessage,
+        onBackClick = onBackClick,
+        onPayClick = onPayClick,
+        onRenewClick = onRenewClick,
+        onCancelClick = onCancelClick,
+        onNavigateToDetail = onNavigateToDetail,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PaymentContent(
+    detailState: UiState<TransaksiModel>,
+    paymentState: UiState<TransaksiModel>,
+    paymentLoadingMessage: String,
+    onBackClick: () -> Unit,
+    onPayClick: (bankCode: String) -> Unit,
+    onRenewClick: (bankCode: String) -> Unit,
+    onCancelClick: () -> Unit,
+    onNavigateToDetail: (transaksiId: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedBank by remember { mutableStateOf(bankList.firstOrNull { it.code == transaksi.metodePembayaran } ?: bankList.first()) }
-    val clipboardManager = LocalClipboardManager.current
+    val transaksi = (detailState as? UiState.Success)?.data
+    var selectedBank by remember(transaksi?.id, transaksi?.metodePembayaran) {
+        mutableStateOf(
+            bankList.firstOrNull { it.code == transaksi?.metodePembayaran } ?: bankList.first()
+        )
+    }
     val context = LocalContext.current
-    var showSuccessDialog by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember(transaksi?.id) { mutableStateOf(false) }
 
-    val isExpired = transaksi.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
-    val isPaid = transaksi.statusPembayaran.equals("BERHASIL", ignoreCase = true)
+    val isExpired = transaksi?.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+    val isPaid = transaksi?.statusPembayaran.equals("BERHASIL", ignoreCase = true)
 
-    // Countdown Timer
-    var secondsLeft by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(transaksi.paymentExpiresAt) {
+    var secondsLeft by remember(transaksi?.paymentExpiresAt) { mutableLongStateOf(0L) }
+    LaunchedEffect(transaksi?.paymentExpiresAt) {
+        val exp = parseIsoInstant(transaksi?.paymentExpiresAt)
+        if (exp == null) {
+            secondsLeft = 0L
+            return@LaunchedEffect
+        }
         while (true) {
-            try {
-                if (!transaksi.paymentExpiresAt.isNullOrBlank()) {
-                    val exp = Instant.parse(transaksi.paymentExpiresAt)
-                    val now = Instant.now()
-                    val diff = exp.epochSecond - now.epochSecond
-                    secondsLeft = diff.coerceAtLeast(0)
-                }
-            } catch (_: Exception) {
-                secondsLeft = 0L
-            }
+            val diff = exp.epochSecond - Instant.now().epochSecond
+            secondsLeft = diff.coerceAtLeast(0L)
+            if (secondsLeft <= 0L) break
             delay(1000)
         }
     }
@@ -137,9 +169,16 @@ fun PaymentScreen(
         }
     }
 
+    fun copyToClipboard(label: String, value: String, toastMessage: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText(label, value))
+        Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -161,7 +200,7 @@ fun PaymentScreen(
             )
         },
         bottomBar = {
-            if (!isPaid) {
+            if (transaksi != null && !isPaid) {
                 Surface(color = Surface, shadowElevation = 8.dp) {
                     Column(
                         modifier = Modifier
@@ -169,15 +208,16 @@ fun PaymentScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (isExpired) {
+                        if (isExpired || (transaksi.paymentExpiresAt != null && secondsLeft <= 0L)) {
                             AppButton(
                                 text = "Buat Instruksi Pembayaran Baru",
                                 onClick = { onRenewClick(selectedBank.code) },
+                                enabled = paymentState !is UiState.Loading,
                                 variant = AppButtonVariant.CONVERSION_CTA
                             )
                         } else {
                             AppButton(
-                                text = if (paymentState is UiState.Loading) "Memproses..." else "Bayar Sekarang  →",
+                                text = if (paymentState is UiState.Loading) "Memproses..." else "Bayar Sekarang →",
                                 onClick = { onPayClick(selectedBank.code) },
                                 enabled = paymentState !is UiState.Loading,
                                 variant = AppButtonVariant.CONVERSION_CTA
@@ -186,6 +226,7 @@ fun PaymentScreen(
                         AppButton(
                             text = "Batalkan Pembayaran",
                             onClick = onCancelClick,
+                            enabled = paymentState !is UiState.Loading,
                             variant = AppButtonVariant.SECONDARY_OUTLINED
                         )
                     }
@@ -193,249 +234,77 @@ fun PaymentScreen(
             }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Virtual Account Instruction Banner
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(PrimaryFixed.copy(alpha = 0.5f))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = PrimaryContainer,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "Silakan melakukan transfer sesuai dengan nomor Virtual Account dan nominal yang tertera di bawah ini.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            // Expiration Timer Card
-            if (!isPaid && !isExpired) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = PrimaryFixed)
+        when (detailState) {
+            UiState.Idle, UiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.HourglassTop,
-                                contentDescription = null,
-                                tint = PrimaryContainer,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = "Batas Waktu Pembayaran",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = PrimaryContainer
-                                )
-                                Text(
-                                    text = formatCountdown(secondsLeft),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryContainer
-                                )
-                            }
-                        }
-                    }
+                    LoadingScreen()
                 }
             }
+            is UiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = detailState.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            is UiState.Success -> {
+                val activeTransaksi = detailState.data
+                val hasExpired = isExpired || (activeTransaksi.paymentExpiresAt != null && secondsLeft <= 0L && !isPaid)
 
-            if (isExpired) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PrimaryFixed.copy(alpha = 0.5f))
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "Instruksi pembayaran ini telah KEDALUWARSA. Silakan buat instruksi pembayaran baru.",
+                            text = "Silakan melakukan transfer sesuai dengan nomor Virtual Account dan nominal yang tertera di bawah ini.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            fontWeight = FontWeight.SemiBold
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
-            }
 
-            // Virtual Account Details
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Detail Transfer Virtual Account",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    // VA Number
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SurfaceContainerLow)
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Nomor Virtual Account (${selectedBank.name})",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
+                    if (!isPaid && !hasExpired) {
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = PrimaryFixed)
                         ) {
-                            Text(
-                                text = transaksi.nomorVirtualAccount ?: "8801239847109283",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryContainer,
-                                letterSpacing = 1.sp
-                            )
-                            IconButton(
-                                onClick = {
-                                    clipboardManager.setText(AnnotatedString(transaksi.nomorVirtualAccount ?: ""))
-                                    Toast.makeText(context, "Nomor Virtual Account berhasil disalin", Toast.LENGTH_SHORT).show()
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Salin Nomor VA",
-                                    tint = Primary
-                                )
-                            }
-                        }
-                    }
-
-                    // Total Amount
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Total Biaya",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatRupiah(transaksi.totalHarga),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryContainer
-                        )
-                    }
-
-                    // Reference Code
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Kode Referensi",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = transaksi.kodeReferensi ?: "-",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            IconButton(
-                                onClick = {
-                                    clipboardManager.setText(AnnotatedString(transaksi.kodeReferensi ?: ""))
-                                    Toast.makeText(context, "Kode Referensi berhasil disalin", Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Salin Kode Referensi",
-                                    tint = Primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Select Bank Virtual Account Card
-            if (!isPaid) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Pilih Metode Bank Virtual Account",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        bankList.forEach { bank ->
-                            val isSelected = selectedBank.code == bank.code
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) PrimaryFixed.copy(alpha = 0.5f) else SurfaceContainerLow)
-                                    .clickable { selectedBank = bank }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -444,68 +313,263 @@ fun PaymentScreen(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Lock,
+                                        imageVector = Icons.Default.HourglassTop,
                                         contentDescription = null,
-                                        tint = if (isSelected) PrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp)
+                                        tint = PrimaryContainer,
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                    Text(
-                                        text = bank.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                    )
+                                    Column {
+                                        Text(
+                                            text = "Batas Waktu Pembayaran",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = PrimaryContainer
+                                        )
+                                        Text(
+                                            text = formatCountdown(secondsLeft),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryContainer
+                                        )
+                                    }
                                 }
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { selectedBank = bank },
-                                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryContainer)
+                            }
+                        }
+                    }
+
+                    if (hasExpired) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = "Instruksi pembayaran ini telah KEDALUWARSA. Silakan buat instruksi pembayaran baru.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
                     }
-                }
-            }
 
-            // Animated Loading Sequence
-            AnimatedVisibility(visible = paymentState is UiState.Loading) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        PulsingCircularProgress()
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Detail Transfer Virtual Account",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            val vaText = activeTransaksi.nomorVirtualAccount.orEmpty().ifBlank { "-" }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(SurfaceContainerLow)
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Nomor Virtual Account (${selectedBank.name})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = vaText,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryContainer,
+                                        letterSpacing = 1.sp
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            copyToClipboard("Virtual Account", vaText, "Nomor Virtual Account berhasil disalin")
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Salin Nomor VA",
+                                            tint = Primary
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Total Biaya",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = formatRupiah(activeTransaksi.totalHarga),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryContainer
+                                )
+                            }
+
+                            val refText = activeTransaksi.kodeReferensi.orEmpty().ifBlank { "-" }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Kode Referensi",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = refText,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            copyToClipboard("Kode Referensi", refText, "Kode Referensi berhasil disalin")
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Salin Kode Referensi",
+                                            tint = Primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!isPaid) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    text = "Pilih Metode Bank Virtual Account",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                bankList.forEach { bank ->
+                                    val isSelected = selectedBank.code == bank.code
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) PrimaryFixed.copy(alpha = 0.5f) else SurfaceContainerLow)
+                                            .clickable { selectedBank = bank }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Lock,
+                                                contentDescription = null,
+                                                tint = if (isSelected) PrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                text = bank.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        }
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = { selectedBank = bank },
+                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryContainer)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(visible = paymentState is UiState.Loading) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                PulsingCircularProgress()
+                                Text(
+                                    text = paymentLoadingMessage,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = PrimaryContainer
+                                )
+                            }
+                        }
+                    }
+
+                    if (paymentState is UiState.Error) {
                         Text(
-                            text = paymentLoadingMessage,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = PrimaryContainer
+                            text = paymentState.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
-
-            if (paymentState is UiState.Error) {
-                Text(
-                    text = paymentState.message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // Success Dialog
-    if (showSuccessDialog) {
+    if (showSuccessDialog && transaksi != null) {
         AlertDialog(
             onDismissRequest = { },
             icon = {
@@ -582,17 +646,31 @@ private fun PulsingCircularProgress() {
     }
 }
 
-private fun formatCountdown(totalSeconds: Long): String {
-    if (totalSeconds <= 0) return "Kedaluwarsa"
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
-}
-
-private fun formatRupiah(amount: Double): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID")).apply {
-        maximumFractionDigits = 0
+@Preview(showBackground = true)
+@Composable
+fun PaymentContentPreview() {
+    ManageventTheme {
+        PaymentContent(
+            detailState = UiState.Success(
+                TransaksiModel(
+                    id = "trx-1",
+                    jumlahTiket = 2,
+                    totalHarga = 300000.0,
+                    status = "MENUNGGU_PEMBAYARAN",
+                    statusPembayaran = "PENDING",
+                    metodePembayaran = "bca_va",
+                    nomorVirtualAccount = "88012345678901",
+                    kodeReferensi = "REF-AB12CD34",
+                    paymentExpiresAt = Instant.now().plusSeconds(3600).toString()
+                )
+            ),
+            paymentState = UiState.Idle,
+            paymentLoadingMessage = "Menghubungkan ke sistem pembayaran...",
+            onBackClick = {},
+            onPayClick = {},
+            onRenewClick = {},
+            onCancelClick = {},
+            onNavigateToDetail = {}
+        )
     }
-    return formatter.format(amount)
 }

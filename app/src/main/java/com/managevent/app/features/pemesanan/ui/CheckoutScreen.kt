@@ -1,5 +1,6 @@
 package com.managevent.app.features.pemesanan.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,9 +68,8 @@ import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.theme.SurfaceContainerHighest
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.katalog.data.EventModel
-import java.text.NumberFormat
-import java.util.Locale
 
 private const val MAX_TICKETS_PER_ORDER = 10
 
@@ -82,6 +84,13 @@ fun CheckoutScreen(
 ) {
     var jumlahTiket by rememberSaveable(eventId) { mutableIntStateOf(1) }
     var catatan by rememberSaveable(eventId) { mutableStateOf("") }
+    val context = LocalContext.current
+
+    LaunchedEffect(checkoutState) {
+        if (checkoutState is UiState.Error) {
+            Toast.makeText(context, checkoutState.message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     CheckoutContent(
         eventState = eventState,
@@ -460,13 +469,6 @@ private fun EventSummaryCard(
             }
         }
     }
-}
-
-private fun formatRupiah(amount: Double): String {
-    val numberFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")).apply {
-        maximumFractionDigits = 0
-    }
-    return "Rp ${numberFormat.format(amount)}"
 }
 
 @Composable

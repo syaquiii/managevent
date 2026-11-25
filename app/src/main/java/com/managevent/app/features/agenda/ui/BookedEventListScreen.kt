@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,15 +38,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.managevent.app.core.components.AppButton
+import com.managevent.app.core.components.AppButtonVariant
 import com.managevent.app.core.components.AppTopBar
+import com.managevent.app.core.components.StatusChip
+import com.managevent.app.core.components.StatusType
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.agenda.data.BookedEventModel
 
@@ -54,16 +64,20 @@ fun BookedEventListScreen(
     state: UiState<List<BookedEventModel>>,
     query: String,
     modifier: Modifier = Modifier,
+    isLoggedIn: Boolean = true,
     onQueryChange: (String) -> Unit = {},
     onOpenNotes: (String) -> Unit = {},
-    onExplore: () -> Unit = {}
+    onExplore: () -> Unit = {},
+    onLoginClick: () -> Unit = {}
 ) {
     BookedEventListContent(
         state = state,
         query = query,
+        isLoggedIn = isLoggedIn,
         onQueryChange = onQueryChange,
         onOpenNotes = onOpenNotes,
         onExplore = onExplore,
+        onLoginClick = onLoginClick,
         modifier = modifier
     )
 }
@@ -72,15 +86,58 @@ fun BookedEventListScreen(
 fun BookedEventListContent(
     state: UiState<List<BookedEventModel>>,
     query: String,
+    isLoggedIn: Boolean,
     onQueryChange: (String) -> Unit,
     onOpenNotes: (String) -> Unit,
     onExplore: () -> Unit,
+    onLoginClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = { AppTopBar(title = "Agenda Persiapan") }
     ) { innerPadding ->
+        if (!isLoggedIn) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = PrimaryContainer,
+                    modifier = Modifier.size(56.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Masuk untuk Kelola Agenda",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Masuk untuk mencatat persiapan event yang sudah Anda pesan.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = OnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                )
+                Spacer(Modifier.height(24.dp))
+                AppButton(
+                    text = "Masuk Akun",
+                    onClick = onLoginClick,
+                    variant = AppButtonVariant.CONVERSION_CTA
+                )
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -101,7 +158,7 @@ fun BookedEventListContent(
             when (state) {
                 is UiState.Idle, is UiState.Loading -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = PrimaryContainer)
                     }
                 }
                 is UiState.Error -> {
@@ -194,7 +251,7 @@ private fun BookedEventCard(
                         Icon(
                             imageVector = Icons.Default.CalendarToday,
                             contentDescription = null,
-                            tint = Color(0xFF3525CD),
+                            tint = PrimaryContainer,
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
@@ -214,7 +271,7 @@ private fun BookedEventCard(
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = Color(0xFFFC6955),
+                                tint = SecondaryContainer,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
@@ -232,13 +289,13 @@ private fun BookedEventCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
-                        StatusChip(status = event.status)
+                        StatusChip(status = StatusType.fromStatus(event.status))
 
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(Color(0xFFE2DFFF))
-                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                                .background(ActiveFilterChipBackground)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -247,14 +304,14 @@ private fun BookedEventCard(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Assignment,
                                     contentDescription = null,
-                                    tint = Color(0xFF3525CD),
+                                    tint = PrimaryContainer,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Text(
                                     text = "${event.noteCount} Agenda",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF3525CD)
+                                    color = PrimaryContainer
                                 )
                             }
                         }
@@ -266,8 +323,8 @@ private fun BookedEventCard(
                 onClick = onOpenNotes,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE2DFFF),
-                    contentColor = Color(0xFF3525CD)
+                    containerColor = ActiveFilterChipBackground,
+                    contentColor = PrimaryContainer
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -290,38 +347,6 @@ private fun BookedEventCard(
 }
 
 @Composable
-private fun StatusChip(status: String) {
-    val done = status.equals("Selesai", ignoreCase = true)
-    val container = if (done) MaterialTheme.colorScheme.surfaceContainerHigh else Color(0xFFE6F4EA)
-    val content = if (done) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF005338)
-
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(container)
-            .padding(horizontal = 10.dp, vertical = 3.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(content)
-            )
-            Text(
-                text = status,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = content
-            )
-        }
-    }
-}
-
-@Composable
 private fun EmptyBookedState(isSearching: Boolean, onExplore: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -339,7 +364,7 @@ private fun EmptyBookedState(isSearching: Boolean, onExplore: () -> Unit) {
             Button(
                 onClick = onExplore,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3525CD))
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer)
             ) {
                 Text("Jelajahi Event")
             }
@@ -358,9 +383,11 @@ fun BookedEventListContentPreview() {
                 )
             ),
             query = "",
+            isLoggedIn = true,
             onQueryChange = {},
             onOpenNotes = {},
-            onExplore = {}
+            onExplore = {},
+            onLoginClick = {}
         )
     }
 }

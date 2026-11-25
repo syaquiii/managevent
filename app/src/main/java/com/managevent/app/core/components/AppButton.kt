@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 
 import com.managevent.app.core.theme.ButtonShape
 import com.managevent.app.core.theme.Outline
-import com.managevent.app.core.theme.Primary
+import com.managevent.app.core.theme.PrimaryContainer
 import com.managevent.app.core.theme.SecondaryContainer
 
 enum class AppButtonVariant {
@@ -40,7 +40,7 @@ fun AppButton(
                 enabled = enabled,
                 shape = ButtonShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Primary,
+                    containerColor = PrimaryContainer,
                     contentColor = Color.White
                 ),
                 modifier = modifier
@@ -72,7 +72,7 @@ fun AppButton(
                 enabled = enabled,
                 shape = ButtonShape,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Primary
+                    contentColor = PrimaryContainer
                 ),
                 border = BorderStroke(1.dp, Outline),
                 modifier = modifier

@@ -4,16 +4,20 @@ import com.managevent.app.core.network.SupabaseClientProvider
 import com.managevent.app.core.util.UiState
 import com.managevent.app.core.util.toUserFriendlyMessage
 import com.managevent.app.features.katalog.data.EventModel
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-class WishlistRepository {
-    private val client = SupabaseClientProvider.client
+open class WishlistRepository(
+    private val clientProvider: () -> SupabaseClient = { SupabaseClientProvider.client }
+) {
+    private val client: SupabaseClient by lazy(clientProvider)
 
     @Serializable
     private data class NewWishlistDto(
@@ -30,7 +34,7 @@ class WishlistRepository {
         }
     }
 
-    suspend fun getWishlistEvents(userIdInput: String): UiState<List<EventModel>> {
+    open suspend fun getWishlistEvents(userIdInput: String): UiState<List<EventModel>> {
         return withContext(Dispatchers.IO) {
             try {
                 val uid = userIdInput.ifBlank { client.auth.currentUserOrNull()?.id.orEmpty() }
@@ -52,13 +56,15 @@ class WishlistRepository {
                 }.decodeList<EventModel>().map { it.copy(isFavorite = true) }
 
                 UiState.Success(events)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
 
-    suspend fun addToWishlist(userIdInput: String, eventId: String): UiState<String> {
+    open suspend fun addToWishlist(userIdInput: String, eventId: String): UiState<String> {
         return withContext(Dispatchers.IO) {
             try {
                 val uid = userIdInput.ifBlank { client.auth.currentUserOrNull()?.id.orEmpty() }
@@ -72,13 +78,15 @@ class WishlistRepository {
                 val dto = NewWishlistDto(userId = uid, eventId = eventId)
                 client.postgrest["wishlist"].insert(dto)
                 UiState.Success("Ditambahkan ke favorit")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 UiState.Error(e.toUserFriendlyMessage())
             }
         }
     }
 
-    suspend fun removeFromWishlist(userIdInput: String, eventId: String): UiState<String> {
+    open suspend fun removeFromWishlist(userIdInput: String, eventId: String): UiState<String> {
         return withContext(Dispatchers.IO) {
             try {
                 val uid = userIdInput.ifBlank { client.auth.currentUserOrNull()?.id.orEmpty() }
@@ -92,6 +100,8 @@ class WishlistRepository {
                     }
                 }
                 UiState.Success("Dihapus dari favorit")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 UiState.Error(e.toUserFriendlyMessage())
             }

@@ -4,12 +4,13 @@
 -- ====================================================================
 
 -- 1. TABEL PROFILES (Detail User Terhubung dengan Supabase Auth + RBAC Role)
+-- Kolom role bernilai 'VENDOR' atau 'PEMESAN'
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     full_name TEXT,
     avatar_url TEXT,
-    role TEXT DEFAULT 'PEMESAN', -- 'VENDOR' atau 'PEMESAN'
+    role TEXT DEFAULT 'PEMESAN',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -18,16 +19,16 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'PEMESAN'
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
-CREATE POLICY "Public profiles are viewable by everyone"
-    ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
+    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
-CREATE POLICY "Users can update their own profile"
-    ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can update their own profile" ON public.profiles
+    FOR UPDATE USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
-CREATE POLICY "Users can insert their own profile"
-    ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can insert their own profile" ON public.profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
 
 
 -- Trigger Otomatis Membuat Row Profile Saat User Mendaftar (SignUp)
@@ -71,29 +72,30 @@ CREATE TABLE IF NOT EXISTS public.events (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- BUG FIX: Menambahkan Relasi Vendor_ID Agar Edit/Hapus Aman!
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public events are viewable by everyone" ON public.events;
-CREATE POLICY "Public events are viewable by everyone"
-    ON public.events FOR SELECT USING (true);
+CREATE POLICY "Public events are viewable by everyone" ON public.events
+    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Events are insertable by authenticated users" ON public.events;
-CREATE POLICY "Events are insertable by authenticated users"
-    ON public.events FOR INSERT WITH CHECK (auth.uid() = vendor_id);
+CREATE POLICY "Events are insertable by authenticated users" ON public.events
+    FOR INSERT WITH CHECK (auth.uid() = vendor_id);
 
 DROP POLICY IF EXISTS "Events are updatable by authenticated users" ON public.events;
-CREATE POLICY "Events are updatable by authenticated users"
-    ON public.events FOR UPDATE USING (auth.uid() = vendor_id);
+CREATE POLICY "Events are updatable by authenticated users" ON public.events
+    FOR UPDATE USING (auth.uid() = vendor_id);
 
 DROP POLICY IF EXISTS "Events are deletable by authenticated users" ON public.events;
-CREATE POLICY "Events are deletable by authenticated users"
-    ON public.events FOR DELETE USING (auth.uid() = vendor_id);
+CREATE POLICY "Events are deletable by authenticated users" ON public.events
+    FOR DELETE USING (auth.uid() = vendor_id);
 
 
 -- 3. TABEL TRANSAKSI (Fitur Pemesanan - Muhammad Darren Achilles Setiawan)
+-- status: 'MENUNGGU_PEMBAYARAN', 'BERJALAN', 'SELESAI', 'DIBATALKAN'
+-- status_pembayaran: 'PENDING', 'BERHASIL', 'KEDALUWARSA', 'DIBATALKAN'
 CREATE TABLE IF NOT EXISTS public.transaksi (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -101,29 +103,41 @@ CREATE TABLE IF NOT EXISTS public.transaksi (
     jumlah_tiket INT DEFAULT 1,
     catatan TEXT,
     total_harga NUMERIC(12, 2) DEFAULT 0.00,
-    status TEXT DEFAULT 'Berjalan', -- 'Berjalan' atau 'Selesai'
+    status TEXT DEFAULT 'MENUNGGU_PEMBAYARAN',
+    status_pembayaran TEXT DEFAULT 'PENDING',
+    metode_pembayaran TEXT DEFAULT 'bca_va',
+    nomor_virtual_account TEXT,
+    kode_referensi TEXT,
+    payment_expires_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS catatan TEXT;
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS status_pembayaran TEXT DEFAULT 'PENDING';
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS metode_pembayaran TEXT DEFAULT 'bca_va';
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS nomor_virtual_account TEXT;
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS kode_referensi TEXT;
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS payment_expires_at TIMESTAMPTZ;
+ALTER TABLE public.transaksi ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
 
 ALTER TABLE public.transaksi ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view transactions" ON public.transaksi;
-CREATE POLICY "Users can view transactions"
-    ON public.transaksi FOR SELECT USING (true);
+CREATE POLICY "Users can view transactions" ON public.transaksi
+    FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert transactions" ON public.transaksi;
-CREATE POLICY "Users can insert transactions"
-    ON public.transaksi FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can insert transactions" ON public.transaksi
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update transactions" ON public.transaksi;
-CREATE POLICY "Users can update transactions"
-    ON public.transaksi FOR UPDATE USING (true);
+CREATE POLICY "Users can update transactions" ON public.transaksi
+    FOR UPDATE USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete transactions" ON public.transaksi;
-CREATE POLICY "Users can delete transactions"
-    ON public.transaksi FOR DELETE USING (true);
+CREATE POLICY "Users can delete transactions" ON public.transaksi
+    FOR DELETE USING (auth.uid() = user_id);
 
 
 -- 4. TABEL ULASAN (Fitur Ulasan - Rayhan Wira Pamungkas)
@@ -140,20 +154,20 @@ CREATE TABLE IF NOT EXISTS public.ulasan (
 ALTER TABLE public.ulasan ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Reviews viewable by everyone" ON public.ulasan;
-CREATE POLICY "Reviews viewable by everyone"
-    ON public.ulasan FOR SELECT USING (true);
+CREATE POLICY "Reviews viewable by everyone" ON public.ulasan
+    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users can insert reviews" ON public.ulasan;
-CREATE POLICY "Users can insert reviews"
-    ON public.ulasan FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can insert reviews" ON public.ulasan
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update reviews" ON public.ulasan;
-CREATE POLICY "Users can update reviews"
-    ON public.ulasan FOR UPDATE USING (true);
+CREATE POLICY "Users can update reviews" ON public.ulasan
+    FOR UPDATE USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete reviews" ON public.ulasan;
-CREATE POLICY "Users can delete reviews"
-    ON public.ulasan FOR DELETE USING (true);
+CREATE POLICY "Users can delete reviews" ON public.ulasan
+    FOR DELETE USING (auth.uid() = user_id);
 
 
 -- 5. TABEL WISHLIST (Fitur Wishlist - Muhammad Syauqi Imaduddin)
@@ -168,12 +182,14 @@ CREATE TABLE IF NOT EXISTS public.wishlist (
 ALTER TABLE public.wishlist ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Wishlist viewable by users" ON public.wishlist;
-CREATE POLICY "Wishlist viewable by users"
-    ON public.wishlist FOR SELECT USING (true);
+CREATE POLICY "Wishlist viewable by users" ON public.wishlist
+    FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can manage wishlist" ON public.wishlist;
-CREATE POLICY "Users can manage wishlist"
-    ON public.wishlist FOR ALL USING (true);
+CREATE POLICY "Users can manage wishlist" ON public.wishlist
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 
 -- 6. TABEL AGENDA / CATATAN PERSIAPAN (Fitur Catatan - Farrel Radya Putra)
@@ -185,6 +201,7 @@ CREATE TABLE IF NOT EXISTS public.agenda (
     date TEXT NOT NULL,
     time TEXT,
     notes TEXT,
+    is_done BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -193,9 +210,39 @@ ALTER TABLE public.agenda ADD COLUMN IF NOT EXISTS is_done BOOLEAN DEFAULT FALSE
 ALTER TABLE public.agenda ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Agenda viewable by users" ON public.agenda;
-CREATE POLICY "Agenda viewable by users"
-    ON public.agenda FOR SELECT USING (true);
+CREATE POLICY "Agenda viewable by users" ON public.agenda
+    FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can manage agenda" ON public.agenda;
-CREATE POLICY "Users can manage agenda"
-    ON public.agenda FOR ALL USING (true);
+CREATE POLICY "Users can manage agenda" ON public.agenda
+    FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+
+-- 7. SUPABASE STORAGE BUCKET 'posters' (Upload Poster Event oleh Vendor)
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('posters', 'posters', true)
+    ON CONFLICT (id) DO UPDATE SET public = true;
+
+    DROP POLICY IF EXISTS "Public posters are readable by everyone" ON storage.objects;
+    CREATE POLICY "Public posters are readable by everyone" ON storage.objects
+        FOR SELECT USING (bucket_id = 'posters');
+
+    DROP POLICY IF EXISTS "Authenticated users can upload posters" ON storage.objects;
+    CREATE POLICY "Authenticated users can upload posters" ON storage.objects
+        FOR INSERT TO authenticated WITH CHECK (bucket_id = 'posters');
+
+    DROP POLICY IF EXISTS "Authenticated users can update posters" ON storage.objects;
+    CREATE POLICY "Authenticated users can update posters" ON storage.objects
+        FOR UPDATE TO authenticated USING (bucket_id = 'posters');
+
+    DROP POLICY IF EXISTS "Authenticated users can delete posters" ON storage.objects;
+    CREATE POLICY "Authenticated users can delete posters" ON storage.objects
+        FOR DELETE TO authenticated USING (bucket_id = 'posters');
+EXCEPTION
+    WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Storage policy dilewati (atur lewat Dashboard > Storage jika diperlukan).';
+END $$;

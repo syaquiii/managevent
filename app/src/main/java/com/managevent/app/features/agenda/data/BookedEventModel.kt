@@ -1,4 +1,4 @@
-    package com.managevent.app.features.agenda.data
+package com.managevent.app.features.agenda.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -17,6 +17,7 @@ data class BookedEventModel(
 internal data class BookedRowDto(
     @SerialName("event_id") val eventId: String? = null,
     val status: String? = null,
+    @SerialName("status_pembayaran") val statusPembayaran: String? = null,
     val events: EventInfoDto? = null
 )
 

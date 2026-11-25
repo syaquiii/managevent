@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,7 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -44,16 +45,26 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.managevent.app.core.components.AppButton
+import com.managevent.app.core.components.AppButtonVariant
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
+import com.managevent.app.core.theme.InactiveFilterChipBackground
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.Outline
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.katalog.data.EventModel
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun WishlistScreen(
@@ -62,20 +73,24 @@ fun WishlistScreen(
     totalCount: Int,
     categories: List<String>,
     modifier: Modifier = Modifier,
+    isLoggedIn: Boolean = true,
     onCategorySelect: (String) -> Unit = {},
     onEventClick: (String) -> Unit = {},
     onFavoriteToggle: (String) -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onLoginClick: () -> Unit = {}
 ) {
     WishlistContent(
         wishlistState = wishlistState,
         selectedCategory = selectedCategory,
         totalCount = totalCount,
         categories = categories,
+        isLoggedIn = isLoggedIn,
         onCategorySelect = onCategorySelect,
         onEventClick = onEventClick,
         onFavoriteToggle = onFavoriteToggle,
         onNavigateToProfile = onNavigateToProfile,
+        onLoginClick = onLoginClick,
         modifier = modifier
     )
 }
@@ -87,15 +102,18 @@ fun WishlistContent(
     selectedCategory: String,
     totalCount: Int,
     categories: List<String>,
+    isLoggedIn: Boolean,
     onCategorySelect: (String) -> Unit,
     onEventClick: (String) -> Unit,
     onFavoriteToggle: (String) -> Unit,
     onNavigateToProfile: () -> Unit,
+    onLoginClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFCF8FF),
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -107,7 +125,7 @@ fun WishlistContent(
                             text = "MANAGEVENT",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF3525CD),
+                                color = PrimaryContainer,
                                 letterSpacing = 1.sp
                             )
                         )
@@ -115,33 +133,75 @@ fun WishlistContent(
                             text = "Favorit",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF181445),
+                                color = OnBackground,
                                 fontSize = 18.sp
                             )
                         )
                     }
                 },
                 actions = {
-                    // Dihapus Ikon Notifikasi (Lonceng) Pajangan Sesuai Feedback
                     Box(
                         modifier = Modifier
                             .padding(end = 16.dp)
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE2DFFF))
+                            .background(ActiveFilterChipBackground)
                             .clickable { onNavigateToProfile() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "👤",
-                            fontSize = 18.sp
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profil",
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFCF8FF))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
             )
         }
     ) { innerPadding ->
+        if (!isLoggedIn) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = PrimaryContainer,
+                    modifier = Modifier.size(56.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Masuk untuk Menyimpan Favorit",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnBackground
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Simpan event pilihan Anda ke daftar favorit agar mudah dibandingkan dan dipesan nanti.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = OnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                AppButton(
+                    text = "Masuk Akun",
+                    onClick = onLoginClick,
+                    variant = AppButtonVariant.CONVERSION_CTA
+                )
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -163,27 +223,25 @@ fun WishlistContent(
                         text = "Favorit Saya",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF181445),
+                            color = OnBackground,
                             fontSize = 20.sp
                         )
                     )
 
                     Surface(
-                        color = Color(0xFFE2DFFF),
+                        color = ActiveFilterChipBackground,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = "$totalCount Acara",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = Color(0xFF3525CD),
+                                color = PrimaryContainer,
                                 fontWeight = FontWeight.Bold
                             ),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
                 }
-                
-                // Dihapus Tombol Filter Pajangan Sesuai Feedback
             }
 
             LazyRow(
@@ -207,10 +265,10 @@ fun WishlistContent(
                         },
                         shape = CircleShape,
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFE2DFFF),
-                            selectedLabelColor = Color(0xFF3525CD),
-                            containerColor = Color(0xFFEFEBFF),
-                            labelColor = Color(0xFF464555)
+                            selectedContainerColor = ActiveFilterChipBackground,
+                            selectedLabelColor = PrimaryContainer,
+                            containerColor = InactiveFilterChipBackground,
+                            labelColor = OnSurfaceVariant
                         ),
                         border = null
                     )
@@ -218,14 +276,14 @@ fun WishlistContent(
             }
 
             when (wishlistState) {
-                is UiState.Loading -> {
+                is UiState.Idle, is UiState.Loading -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Color(0xFF3525CD))
+                        CircularProgressIndicator(color = PrimaryContainer)
                     }
                 }
                 is UiState.Error -> {
@@ -252,8 +310,15 @@ fun WishlistContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Tidak ada event favorit di kategori '$selectedCategory'.",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
+                                text = if (selectedCategory == "Semua") {
+                                    "Belum ada event di daftar favorit Anda."
+                                } else {
+                                    "Tidak ada event favorit di kategori '$selectedCategory'."
+                                },
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = OnSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
                             )
                         }
                     } else {
@@ -275,7 +340,6 @@ fun WishlistContent(
                         }
                     }
                 }
-                else -> {}
             }
         }
     }
@@ -287,12 +351,7 @@ fun WishlistEventCard(
     onEventClick: (String) -> Unit,
     onFavoriteToggle: (String) -> Unit
 ) {
-    val formattedPrice = try {
-        val formatter = NumberFormat.getInstance(Locale.forLanguageTag("id-ID"))
-        "Rp " + formatter.format(event.price.toLong())
-    } catch (_: Exception) {
-        "Rp ${event.price.toLong()}"
-    }
+    val formattedPrice = formatRupiah(event.price)
 
     Card(
         modifier = Modifier
@@ -326,7 +385,7 @@ fun WishlistEventCard(
                         text = event.category,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF181445),
+                            color = OnBackground,
                             fontSize = 11.sp
                         ),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -359,7 +418,7 @@ fun WishlistEventCard(
                 Text(
                     text = event.date,
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color(0xFFFC6955),
+                        color = SecondaryContainer,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp
                     )
@@ -369,7 +428,7 @@ fun WishlistEventCard(
                     text = event.title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF181445),
+                        color = OnBackground,
                         fontSize = 14.sp,
                         lineHeight = 18.sp
                     ),
@@ -384,13 +443,13 @@ fun WishlistEventCard(
                     Icon(
                         imageVector = Icons.Outlined.Place,
                         contentDescription = "Lokasi",
-                        tint = Color(0xFF777587),
+                        tint = Outline,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = event.location,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF464555),
+                            color = OnSurfaceVariant,
                             fontSize = 11.sp
                         ),
                         maxLines = 1,
@@ -404,7 +463,7 @@ fun WishlistEventCard(
                     text = formattedPrice,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3525CD),
+                        color = PrimaryContainer,
                         fontSize = 15.sp
                     )
                 )
@@ -423,7 +482,7 @@ fun WishlistContentPreview() {
                     EventModel(
                         id = "1",
                         title = "Nusantara Symphony Fest",
-                        category = "Konser Musik",
+                        category = "Konser",
                         date = "14 Mei 2026",
                         location = "GBK, Jakarta",
                         price = 250000.0,
@@ -432,12 +491,14 @@ fun WishlistContentPreview() {
                 )
             ),
             selectedCategory = "Semua",
-            totalCount = 6,
-            categories = listOf("Semua", "Konser Musik", "Pernikahan", "Festival", "Pameran"),
+            totalCount = 1,
+            categories = listOf("Semua", "Pernikahan", "Konser", "Seminar", "Ulang Tahun", "Festival", "Pameran"),
+            isLoggedIn = true,
             onCategorySelect = {},
             onEventClick = {},
             onFavoriteToggle = {},
-            onNavigateToProfile = {}
+            onNavigateToProfile = {},
+            onLoginClick = {}
         )
     }
 }

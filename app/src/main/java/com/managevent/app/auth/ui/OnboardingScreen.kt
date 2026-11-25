@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,9 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ConfirmationNumber
-import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
@@ -111,6 +112,7 @@ fun OnboardingContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFFF7F5FF),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             // Footer Navigation Row (Pinned at bottom so it's NEVER cut off)
             Surface(
@@ -471,7 +473,7 @@ fun OnboardingGraphicPage2() {
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("CHECKLIST ACARA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }

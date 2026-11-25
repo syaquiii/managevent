@@ -1,24 +1,41 @@
 package com.managevent.app.features.agenda.data
 
 import com.managevent.app.core.network.SupabaseClientProvider
+import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.toUserFriendlyMessage
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AgendaRepository {
-    private val client = SupabaseClientProvider.client
+open class AgendaRepository(
+    private val clientProvider: () -> SupabaseClient = { SupabaseClientProvider.client }
+) {
+    private val client: SupabaseClient by lazy(clientProvider)
 
-    suspend fun getBookedEvents(): List<BookedEventModel> = withContext(Dispatchers.IO) {
-        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext emptyList()
+    open suspend fun getBookedEvents(): UiState<List<BookedEventModel>> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext UiState.Success(emptyList())
 
         try {
             val rows = client.postgrest["transaksi"]
-                .select(Columns.raw("event_id, status, events(id, title, date, location, image_url)")) {
+                .select(Columns.raw("event_id, status, status_pembayaran, events(id, title, date, location, image_url)")) {
                     filter { eq("user_id", uid) }
+                    order("created_at", order = Order.DESCENDING)
                 }
                 .decodeList<BookedRowDto>()
+
+            val validRows = rows.filter { row ->
+                val isCancelled = row.status.equals("DIBATALKAN", ignoreCase = true) ||
+                    row.statusPembayaran.equals("DIBATALKAN", ignoreCase = true)
+                val isUnpaid = row.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) ||
+                    row.statusPembayaran.equals("PENDING", ignoreCase = true) ||
+                    row.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+                row.events != null && !isCancelled && !isUnpaid
+            }
 
             val counts = client.postgrest["agenda"]
                 .select(Columns.list("event_id")) { filter { eq("user_id", uid) } }
@@ -27,7 +44,7 @@ class AgendaRepository {
                 .groupingBy { it }
                 .eachCount()
 
-            rows.filter { it.events != null }
+            val mapped = validRows
                 .distinctBy { it.events!!.id }
                 .map {
                     val e = it.events!!
@@ -41,16 +58,19 @@ class AgendaRepository {
                         noteCount = counts[e.id] ?: 0
                     )
                 }
-        } catch (_: Exception) {
-            emptyList()
+            UiState.Success(mapped)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
     }
 
-    suspend fun getNotes(eventId: String): List<AgendaModel> = withContext(Dispatchers.IO) {
-        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext emptyList()
+    open suspend fun getNotes(eventId: String): UiState<List<AgendaModel>> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
         try {
-            client.postgrest["agenda"]
+            val list = client.postgrest["agenda"]
                 .select {
                     filter {
                         eq("user_id", uid)
@@ -59,23 +79,31 @@ class AgendaRepository {
                 }
                 .decodeList<AgendaModel>()
                 .sortedBy { it.date }
-        } catch (_: Exception) {
-            emptyList()
+            UiState.Success(list)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
     }
 
-    suspend fun addNote(note: AgendaModel) = withContext(Dispatchers.IO) {
-        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext
+    open suspend fun addNote(note: AgendaModel): UiState<String> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id
+            ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
         try {
             client.postgrest["agenda"].insert(note.copy(id = null, userId = uid))
-        } catch (_: Exception) {
+            UiState.Success("Agenda ditambahkan")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
-        Unit
     }
 
-    suspend fun updateNote(note: AgendaModel) = withContext(Dispatchers.IO) {
-        val uid = client.auth.currentUserOrNull()?.id ?: return@withContext
-        val id = note.id ?: return@withContext
+    open suspend fun updateNote(note: AgendaModel): UiState<String> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id
+            ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
+        val id = note.id ?: return@withContext UiState.Error("ID agenda tidak valid.")
 
         try {
             client.postgrest["agenda"].update({
@@ -83,31 +111,55 @@ class AgendaRepository {
                 set("notes", note.notes)
                 set("date", note.date)
                 set("is_done", note.isDone)
-            }) { filter { eq("id", id) } }
-        } catch (_: Exception) {
+            }) {
+                filter {
+                    eq("id", id)
+                    eq("user_id", uid)
+                }
+            }
+            UiState.Success("Agenda diperbarui")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
-        Unit
     }
 
-    suspend fun setDone(id: String, done: Boolean) = withContext(Dispatchers.IO) {
-        client.auth.currentUserOrNull()?.id ?: return@withContext
+    open suspend fun setDone(id: String, done: Boolean): UiState<String> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id
+            ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
         try {
             client.postgrest["agenda"].update({ set("is_done", done) }) {
-                filter { eq("id", id) }
+                filter {
+                    eq("id", id)
+                    eq("user_id", uid)
+                }
             }
-        } catch (_: Exception) {
+            UiState.Success(if (done) "Agenda selesai" else "Agenda dibuka kembali")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
-        Unit
     }
 
-    suspend fun deleteNote(id: String) = withContext(Dispatchers.IO) {
-        client.auth.currentUserOrNull()?.id ?: return@withContext
+    open suspend fun deleteNote(id: String): UiState<String> = withContext(Dispatchers.IO) {
+        val uid = client.auth.currentUserOrNull()?.id
+            ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
         try {
-            client.postgrest["agenda"].delete { filter { eq("id", id) } }
-        } catch (_: Exception) {
+            client.postgrest["agenda"].delete {
+                filter {
+                    eq("id", id)
+                    eq("user_id", uid)
+                }
+            }
+            UiState.Success("Agenda dihapus")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UiState.Error(e.toUserFriendlyMessage())
         }
-        Unit
     }
 }

@@ -24,18 +24,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.managevent.app.core.theme.ActiveFilterChipBackground
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.PrimaryContainer
 
 @Composable
 fun LocationAndBadgeBar(
     modifier: Modifier = Modifier,
-    currentLocation: String = "Indonesia",
+    currentLocation: String = "Semua Lokasi",
     onLocationClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -47,26 +51,26 @@ fun LocationAndBadgeBar(
             Icon(
                 imageVector = Icons.Outlined.NearMe,
                 contentDescription = "Lokasi Icon",
-                tint = Color(0xFF3F51B5),
+                tint = PrimaryContainer,
                 modifier = Modifier.size(20.dp)
             )
             Text(
                 text = "Lokasi: ",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFF616161)
+                    color = OnSurfaceVariant
                 )
             )
             Text(
                 text = currentLocation,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1C1B1F)
+                    color = OnBackground
                 )
             )
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = "Pilih Lokasi",
-                tint = Color(0xFF616161),
+                tint = OnSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -74,14 +78,14 @@ fun LocationAndBadgeBar(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFFEDE7F6))
+                .background(ActiveFilterChipBackground)
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text(
                 text = "Tiket Resmi",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF5E35B1),
+                    color = PrimaryContainer,
                     fontSize = 12.sp
                 )
             )

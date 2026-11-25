@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +25,10 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ConfirmationNumber
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AlertDialog
@@ -33,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -40,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +58,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,24 +68,59 @@ import com.managevent.app.auth.data.UserModel
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
 import com.managevent.app.core.components.AppTopBar
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
+import com.managevent.app.core.theme.InputFieldBackground
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.Outline
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.util.UiState
 
 @Composable
 fun ProfileScreen(
-    user: UserModel = UserModel(
-        email = "user@managevent.com",
-        fullName = "Pengguna Managevent",
-        role = "PEMESAN"
-    ),
+    user: UserModel?,
     modifier: Modifier = Modifier,
+    actionState: UiState<String> = UiState.Idle,
+    onLoginClick: () -> Unit = {},
+    onRegisterClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
     onNavigateToRiwayat: () -> Unit = {},
     onNavigateToWishlist: () -> Unit = {},
     onUpdateProfile: (String, String) -> Unit = { _, _ -> },
-    onUpdatePassword: (String) -> Unit = {}
+    onUpdatePassword: (String) -> Unit = {},
+    onClearActionState: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(actionState) {
+        when (actionState) {
+            is UiState.Success -> {
+                Toast.makeText(context, actionState.data, Toast.LENGTH_SHORT).show()
+                showEditProfileDialog = false
+                showChangePasswordDialog = false
+                onClearActionState()
+            }
+            is UiState.Error -> {
+                Toast.makeText(context, actionState.message, Toast.LENGTH_SHORT).show()
+                onClearActionState()
+            }
+            else -> {}
+        }
+    }
+
     ProfileContent(
         user = user,
+        actionState = actionState,
+        showEditProfileDialog = showEditProfileDialog,
+        showChangePasswordDialog = showChangePasswordDialog,
+        onShowEditProfileDialog = { showEditProfileDialog = it },
+        onShowChangePasswordDialog = { showChangePasswordDialog = it },
+        onLoginClick = onLoginClick,
+        onRegisterClick = onRegisterClick,
         onLogoutClick = onLogoutClick,
         onNavigateToRiwayat = onNavigateToRiwayat,
         onNavigateToWishlist = onNavigateToWishlist,
@@ -89,7 +132,14 @@ fun ProfileScreen(
 
 @Composable
 fun ProfileContent(
-    user: UserModel,
+    user: UserModel?,
+    actionState: UiState<String>,
+    showEditProfileDialog: Boolean,
+    showChangePasswordDialog: Boolean,
+    onShowEditProfileDialog: (Boolean) -> Unit,
+    onShowChangePasswordDialog: (Boolean) -> Unit,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onNavigateToRiwayat: () -> Unit,
     onNavigateToWishlist: () -> Unit,
@@ -97,163 +147,218 @@ fun ProfileContent(
     onUpdatePassword: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val isUpdating = actionState is UiState.Loading
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { AppTopBar(title = "Profil Pengguna") },
-        containerColor = Color(0xFFFCF8FF)
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Avatar Container with Vector Icon & Edit Badge
-            Box(
+        if (user == null) {
+            Column(
                 modifier = Modifier
-                    .size(96.dp)
-                    .clickable { showEditProfileDialog = true },
-                contentAlignment = Alignment.BottomEnd
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .size(96.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE2DFFF)),
+                        .background(ActiveFilterChipBackground),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Foto Profil",
-                        tint = Color(0xFF3525CD),
+                        imageVector = Icons.Default.PersonOutline,
+                        contentDescription = "Mode Tamu",
+                        tint = PrimaryContainer,
                         modifier = Modifier.size(48.dp)
                     )
                 }
 
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Anda Belum Masuk",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnBackground
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Masuk atau buat akun untuk memesan tiket, menyimpan favorit, menulis ulasan, dan mengelola agenda event.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = OnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                AppButton(
+                    text = "Masuk Akun",
+                    onClick = onLoginClick,
+                    variant = AppButtonVariant.CONVERSION_CTA
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                AppButton(
+                    text = "Daftar Akun Baru",
+                    onClick = onRegisterClick,
+                    variant = AppButtonVariant.SECONDARY_OUTLINED
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF3525CD)),
-                    contentAlignment = Alignment.Center
+                        .size(96.dp)
+                        .clickable { onShowEditProfileDialog(true) },
+                    contentAlignment = Alignment.BottomEnd
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Ubah Foto",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // User Name
-            Text(
-                text = if (!user.fullName.isNullOrBlank()) user.fullName else "Nama Pengguna",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF181445),
-                    fontSize = 20.sp
-                )
-            )
-
-            // Email
-            Text(
-                text = user.email.ifEmpty { "user@managevent.com" },
-                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Clean Role Badge Pill with Vector Icon
-            Surface(
-                color = Color(0xFFE2DFFF),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.clickable { showEditProfileDialog = true }
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = if (user.role == "VENDOR") Icons.Outlined.Storefront else Icons.Outlined.ConfirmationNumber,
-                        contentDescription = null,
-                        tint = Color(0xFF3525CD),
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = if (user.role == "VENDOR") "VENDOR / EO" else "PEMESAN TIKET",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF3525CD),
-                            fontWeight = FontWeight.Bold
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(ActiveFilterChipBackground),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Foto Profil",
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(48.dp)
                         )
-                    )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Ubah Profil",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Profile Options Menu Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    ProfileOptionItem(
-                        icon = Icons.Default.AccountCircle,
-                        title = "Ubah Profil & Data Diri",
-                        onClick = { showEditProfileDialog = true }
+                Text(
+                    text = if (!user.fullName.isNullOrBlank()) user.fullName else "Pengguna Managevent",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnBackground,
+                        fontSize = 20.sp
                     )
-                    ProfileOptionItem(
-                        icon = Icons.Default.Receipt,
-                        title = "Riwayat Transaksi Saya",
-                        onClick = onNavigateToRiwayat
-                    )
-                    ProfileOptionItem(
-                        icon = Icons.Default.Favorite,
-                        title = "Koleksi Favorit Saya",
-                        onClick = onNavigateToWishlist
-                    )
-                    ProfileOptionItem(
-                        icon = Icons.Default.Lock,
-                        title = "Keamanan & Kata Sandi",
-                        onClick = { showChangePasswordDialog = true }
-                    )
+                )
+
+                Text(
+                    text = user.email.ifEmpty { "-" },
+                    style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Surface(
+                    color = ActiveFilterChipBackground,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.clickable { onShowEditProfileDialog(true) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (user.role == "VENDOR") Icons.Outlined.Storefront else Icons.Outlined.ConfirmationNumber,
+                            contentDescription = null,
+                            tint = PrimaryContainer,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = if (user.role == "VENDOR") "VENDOR / EO" else "PEMESAN TIKET",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = PrimaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                        ProfileOptionItem(
+                            icon = Icons.Default.AccountCircle,
+                            title = "Ubah Profil & Data Diri",
+                            onClick = { onShowEditProfileDialog(true) }
+                        )
+                        ProfileOptionItem(
+                            icon = Icons.Default.Receipt,
+                            title = "Riwayat Transaksi Saya",
+                            onClick = onNavigateToRiwayat
+                        )
+                        ProfileOptionItem(
+                            icon = Icons.Default.Favorite,
+                            title = "Koleksi Favorit Saya",
+                            onClick = onNavigateToWishlist
+                        )
+                        ProfileOptionItem(
+                            icon = Icons.Default.Lock,
+                            title = "Keamanan & Kata Sandi",
+                            onClick = { onShowChangePasswordDialog(true) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                AppButton(
+                    text = "Keluar dari Akun",
+                    onClick = onLogoutClick,
+                    variant = AppButtonVariant.SECONDARY_OUTLINED
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Logout Button
-            AppButton(
-                text = "Keluar dari Akun",
-                onClick = onLogoutClick,
-                variant = AppButtonVariant.SECONDARY_OUTLINED
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
-    // Edit Profile Dialog
-    if (showEditProfileDialog) {
-        var newFullName by remember { mutableStateOf(user.fullName.orEmpty()) }
-        var newRole by remember { mutableStateOf(user.role) }
+    if (showEditProfileDialog && user != null) {
+        var newFullName by remember(user) { mutableStateOf(user.fullName.orEmpty()) }
+        var newRole by remember(user) { mutableStateOf(user.role) }
 
         AlertDialog(
-            onDismissRequest = { showEditProfileDialog = false },
+            onDismissRequest = { if (!isUpdating) onShowEditProfileDialog(false) },
             title = {
                 Text(
                     text = "Ubah Profil & Data Diri",
@@ -268,6 +373,7 @@ fun ProfileContent(
                         value = newFullName,
                         onValueChange = { newFullName = it },
                         placeholder = { Text("Nama Lengkap") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
@@ -284,8 +390,8 @@ fun ProfileContent(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFFE2DFFF),
-                                selectedLabelColor = Color(0xFF3525CD)
+                                selectedContainerColor = ActiveFilterChipBackground,
+                                selectedLabelColor = PrimaryContainer
                             )
                         )
                         FilterChip(
@@ -295,8 +401,8 @@ fun ProfileContent(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFFE2DFFF),
-                                selectedLabelColor = Color(0xFF3525CD)
+                                selectedContainerColor = ActiveFilterChipBackground,
+                                selectedLabelColor = PrimaryContainer
                             )
                         )
                     }
@@ -304,21 +410,27 @@ fun ProfileContent(
             },
             confirmButton = {
                 TextButton(
+                    enabled = !isUpdating,
                     onClick = {
-                        if (newFullName.isNotBlank()) {
-                            onUpdateProfile(newFullName, newRole)
-                            Toast.makeText(context, "Profil berhasil diperbarui", Toast.LENGTH_SHORT).show()
-                            showEditProfileDialog = false
+                        if (newFullName.trim().isNotBlank()) {
+                            onUpdateProfile(newFullName.trim(), newRole)
                         } else {
                             Toast.makeText(context, "Nama tidak boleh kosong", Toast.LENGTH_SHORT).show()
                         }
                     }
                 ) {
-                    Text("Simpan", fontWeight = FontWeight.Bold, color = Color(0xFF3525CD))
+                    Text(
+                        text = if (isUpdating) "Menyimpan..." else "Simpan",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryContainer
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) {
+                TextButton(
+                    enabled = !isUpdating,
+                    onClick = { onShowEditProfileDialog(false) }
+                ) {
                     Text("Batal")
                 }
             },
@@ -327,12 +439,13 @@ fun ProfileContent(
         )
     }
 
-    // Change Password Dialog
-    if (showChangePasswordDialog) {
+    if (showChangePasswordDialog && user != null) {
         var newPassword by remember { mutableStateOf("") }
+        var confirmPassword by remember { mutableStateOf("") }
+        var isPasswordVisible by remember { mutableStateOf(false) }
 
         AlertDialog(
-            onDismissRequest = { showChangePasswordDialog = false },
+            onDismissRequest = { if (!isUpdating) onShowChangePasswordDialog(false) },
             title = {
                 Text(
                     text = "Keamanan & Kata Sandi",
@@ -347,29 +460,57 @@ fun ProfileContent(
                         value = newPassword,
                         onValueChange = { newPassword = it },
                         placeholder = { Text("Minimal 6 karakter") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = "Tampilkan Kata Sandi",
+                                    tint = Outline
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Text("Konfirmasi Kata Sandi", style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        placeholder = { Text("Ulangi kata sandi baru") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
             },
             confirmButton = {
                 TextButton(
+                    enabled = !isUpdating,
                     onClick = {
-                        if (newPassword.length >= 6) {
-                            onUpdatePassword(newPassword)
-                            Toast.makeText(context, "Kata sandi diperbarui", Toast.LENGTH_SHORT).show()
-                            showChangePasswordDialog = false
-                        } else {
-                            Toast.makeText(context, "Minimal 6 karakter", Toast.LENGTH_SHORT).show()
+                        when {
+                            newPassword.length < 6 ->
+                                Toast.makeText(context, "Kata sandi minimal 6 karakter", Toast.LENGTH_SHORT).show()
+                            newPassword != confirmPassword ->
+                                Toast.makeText(context, "Konfirmasi kata sandi tidak cocok", Toast.LENGTH_SHORT).show()
+                            else -> onUpdatePassword(newPassword)
                         }
                     }
                 ) {
-                    Text("Perbarui", fontWeight = FontWeight.Bold, color = Color(0xFF3525CD))
+                    Text(
+                        text = if (isUpdating) "Memperbarui..." else "Perbarui",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryContainer
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showChangePasswordDialog = false }) {
+                TextButton(
+                    enabled = !isUpdating,
+                    onClick = { onShowChangePasswordDialog(false) }
+                ) {
                     Text("Batal")
                 }
             },
@@ -401,13 +542,13 @@ fun ProfileOptionItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF6F2FF)),
+                    .background(InputFieldBackground),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = Color(0xFF3525CD),
+                    tint = PrimaryContainer,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -415,7 +556,7 @@ fun ProfileOptionItem(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF181445)
+                    color = OnBackground
                 )
             )
         }
@@ -423,7 +564,7 @@ fun ProfileOptionItem(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = "Buka",
-            tint = Color(0xFF777587),
+            tint = Outline,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -439,6 +580,35 @@ fun ProfileContentPreview() {
                 fullName = "Sarah Wijaya",
                 role = "PEMESAN"
             ),
+            actionState = UiState.Idle,
+            showEditProfileDialog = false,
+            showChangePasswordDialog = false,
+            onShowEditProfileDialog = {},
+            onShowChangePasswordDialog = {},
+            onLoginClick = {},
+            onRegisterClick = {},
+            onLogoutClick = {},
+            onNavigateToRiwayat = {},
+            onNavigateToWishlist = {},
+            onUpdateProfile = { _, _ -> },
+            onUpdatePassword = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ProfileGuestContentPreview() {
+    ManageventTheme {
+        ProfileContent(
+            user = null,
+            actionState = UiState.Idle,
+            showEditProfileDialog = false,
+            showChangePasswordDialog = false,
+            onShowEditProfileDialog = {},
+            onShowChangePasswordDialog = {},
+            onLoginClick = {},
+            onRegisterClick = {},
             onLogoutClick = {},
             onNavigateToRiwayat = {},
             onNavigateToWishlist = {},

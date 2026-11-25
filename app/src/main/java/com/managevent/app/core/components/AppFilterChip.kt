@@ -1,6 +1,5 @@
 package com.managevent.app.core.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
@@ -14,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.managevent.app.core.theme.ActiveFilterChipBackground
 import com.managevent.app.core.theme.InactiveFilterChipBackground
 import com.managevent.app.core.theme.OnSurfaceVariant
-import com.managevent.app.core.theme.Primary
+import com.managevent.app.core.theme.PrimaryContainer
 
 @Composable
 fun AppFilterChip(
@@ -37,7 +36,7 @@ fun AppFilterChip(
             containerColor = InactiveFilterChipBackground,
             labelColor = OnSurfaceVariant,
             selectedContainerColor = ActiveFilterChipBackground,
-            selectedLabelColor = Primary
+            selectedLabelColor = PrimaryContainer
         ),
         border = null,
         modifier = modifier.height(32.dp)

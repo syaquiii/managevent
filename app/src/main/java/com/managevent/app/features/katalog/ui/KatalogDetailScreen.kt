@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -57,16 +59,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.managevent.app.core.components.LoadingScreen
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
+import com.managevent.app.core.theme.StatusBerjalanBackground
+import com.managevent.app.core.theme.StatusBerjalanText
+import com.managevent.app.core.theme.SurfaceContainer
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.katalog.data.EventModel
+import com.managevent.app.features.katalog.viewmodel.EventReviewSummary
+import java.util.Locale
 
 @Composable
 fun KatalogDetailScreen(
     detailState: UiState<EventModel>,
+    modifier: Modifier = Modifier,
+    reviewSummary: EventReviewSummary = EventReviewSummary(),
     userRole: String = "",
     currentUserId: String = "",
-    modifier: Modifier = Modifier,
     onBackClick: () -> Unit = {},
     onEditClick: (String) -> Unit = {},
     onDeleteConfirm: (String) -> Unit = {},
@@ -76,6 +91,7 @@ fun KatalogDetailScreen(
 ) {
     KatalogDetailContent(
         detailState = detailState,
+        reviewSummary = reviewSummary,
         userRole = userRole,
         currentUserId = currentUserId,
         onBackClick = onBackClick,
@@ -92,6 +108,7 @@ fun KatalogDetailScreen(
 @Composable
 fun KatalogDetailContent(
     detailState: UiState<EventModel>,
+    reviewSummary: EventReviewSummary,
     userRole: String,
     currentUserId: String,
     onBackClick: () -> Unit,
@@ -128,12 +145,13 @@ fun KatalogDetailContent(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFAFBFD),
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Detail Vendor / Event",
+                        text = "Detail Event & Paket",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -149,9 +167,8 @@ fun KatalogDetailContent(
                     }
                 },
                 actions = {
-                    if (userRole == "VENDOR" && detailState is UiState.Success) {
+                    if (userRole == "VENDOR" && currentUserId.isNotBlank() && detailState is UiState.Success) {
                         val event = detailState.data
-                        // Tampilkan tombol Hapus/Edit HANYA jika event ini milik vendor yang sedang login!
                         if (event.vendorId == currentUserId) {
                             IconButton(onClick = { onEditClick(event.id) }) {
                                 Icon(
@@ -192,27 +209,42 @@ fun KatalogDetailContent(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFF3F4F8))
+                                .background(SurfaceContainer)
                         ) {
                             Icon(
                                 imageVector = if (event.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Favorit",
-                                tint = if (event.isFavorite) Color(0xFFFF385C) else Color(0xFF616161)
+                                tint = if (event.isFavorite) Color(0xFFFF385C) else OnSurfaceVariant
                             )
                         }
 
                         Spacer(modifier = Modifier.width(12.dp))
 
+                        Column(modifier = Modifier.padding(end = 12.dp)) {
+                            Text(
+                                text = "Harga Tiket",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = OnSurfaceVariant
+                            )
+                            Text(
+                                text = formatRupiah(event.price),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryContainer
+                                )
+                            )
+                        }
+
                         Button(
                             onClick = { onBookClick(event.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFC6955)),
+                            colors = ButtonDefaults.buttonColors(containerColor = SecondaryContainer),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp)
                         ) {
                             Text(
-                                text = "Pesan Sekarang ->",
+                                text = "Pesan Sekarang →",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = Color.White
@@ -263,19 +295,27 @@ fun KatalogDetailContent(
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            Box(
+                            Row(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(16.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .background(StatusBerjalanBackground)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(StatusBerjalanText)
+                                )
                                 Text(
-                                    text = "🔴 Pendaftaran Dibuka",
+                                    text = "Pendaftaran Dibuka",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2E7D32)
+                                        color = StatusBerjalanText
                                     )
                                 )
                             }
@@ -286,14 +326,14 @@ fun KatalogDetailContent(
                                         .align(Alignment.BottomStart)
                                         .padding(16.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFE2DFFF))
+                                        .background(ActiveFilterChipBackground)
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text(
                                         text = event.category,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF3525CD),
+                                            color = PrimaryContainer,
                                             fontSize = 12.sp
                                         )
                                     )
@@ -311,7 +351,7 @@ fun KatalogDetailContent(
                                 text = event.title,
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF181445),
+                                    color = OnBackground,
                                     fontSize = 20.sp
                                 )
                             )
@@ -327,26 +367,36 @@ fun KatalogDetailContent(
                                 Icon(
                                     imageVector = Icons.Default.Star,
                                     contentDescription = "Rating",
-                                    tint = Color(0xFFFC6955),
+                                    tint = SecondaryContainer,
                                     modifier = Modifier.size(18.dp)
                                 )
-                                Text(
-                                    text = "4.8",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF3525CD)
+                                if (reviewSummary.reviewCount > 0) {
+                                    Text(
+                                        text = String.format(Locale.US, "%.1f", reviewSummary.averageRating),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryContainer
+                                        )
                                     )
-                                )
-                                Text(
-                                    text = "(124 Ulasan)",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFF464555)
+                                    Text(
+                                        text = "(${reviewSummary.reviewCount} Ulasan)",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = OnSurfaceVariant
+                                        )
                                     )
-                                )
+                                } else {
+                                    Text(
+                                        text = "Belum ada ulasan • Lihat / Tulis Ulasan",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = PrimaryContainer
+                                        )
+                                    )
+                                }
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = "Buka Halaman Ulasan",
-                                    tint = Color(0xFF3525CD),
+                                    tint = PrimaryContainer,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -354,7 +404,7 @@ fun KatalogDetailContent(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF0EBFF))
+                                colors = CardDefaults.cardColors(containerColor = SurfaceContainer)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(16.dp),
@@ -368,19 +418,19 @@ fun KatalogDetailContent(
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFFE2DFFF)),
+                                                .background(ActiveFilterChipBackground),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.CalendarToday,
                                                 contentDescription = "Tanggal",
-                                                tint = Color(0xFF3525CD),
+                                                tint = PrimaryContainer,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
                                         Column {
-                                            Text("Tanggal Pelaksanaan", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF464555)))
-                                            Text(event.date, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
+                                            Text("Tanggal Pelaksanaan", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                                            Text(event.date.ifBlank { "-" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = OnBackground))
                                         }
                                     }
 
@@ -392,19 +442,19 @@ fun KatalogDetailContent(
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFFE2DFFF)),
+                                                .background(ActiveFilterChipBackground),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Outlined.Place,
                                                 contentDescription = "Lokasi",
-                                                tint = Color(0xFF3525CD),
+                                                tint = PrimaryContainer,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
                                         Column {
-                                            Text("Lokasi Acara", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF464555)))
-                                            Text(event.location, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF181445)))
+                                            Text("Lokasi Acara", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                                            Text(event.location.ifBlank { "-" }, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = OnBackground))
                                         }
                                     }
                                 }
@@ -414,14 +464,14 @@ fun KatalogDetailContent(
                                 text = "Deskripsi Event",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF181445)
+                                    color = OnBackground
                                 )
                             )
 
                             Text(
-                                text = if (event.description.isNotBlank()) event.description else "Pameran vendor pernikahan terlengkap di Indonesia menghadirkan lebih dari 200 vendor terkurasi.",
+                                text = event.description.ifBlank { "Informasi deskripsi event belum ditambahkan oleh penyelenggara." },
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = Color(0xFF464555),
+                                    color = OnSurfaceVariant,
                                     lineHeight = 22.sp
                                 )
                             )
@@ -452,6 +502,7 @@ fun KatalogDetailContentPreview() {
                     isFavorite = true
                 )
             ),
+            reviewSummary = EventReviewSummary(averageRating = 4.8, reviewCount = 24),
             userRole = "VENDOR",
             currentUserId = "",
             onBackClick = {},

@@ -3,6 +3,7 @@ package com.managevent.app.features.pemesanan.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.toUserFriendlyMessage
 import com.managevent.app.features.pemesanan.data.PemesananRepository
 import com.managevent.app.features.pemesanan.data.TransaksiModel
 import kotlinx.coroutines.CancellationException
@@ -10,10 +11,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class PemesananViewModel(
-    private val repository: PemesananRepository = PemesananRepository()
+    private val repository: PemesananRepository = PemesananRepository(),
+    private val paymentStepDelayMs: Long = 1000L
 ) : ViewModel() {
 
     private val _riwayatState = MutableStateFlow<UiState<List<TransaksiModel>>>(UiState.Idle)
@@ -33,19 +36,30 @@ class PemesananViewModel(
 
     fun consumeCheckoutSuccess() {
         if (_checkoutState.value is UiState.Success) {
-            _checkoutState.value = UiState.Idle
+            _checkoutState.update { UiState.Idle }
         }
+    }
+
+    fun consumePaymentState() {
+        _paymentState.update { UiState.Idle }
+    }
+
+    fun clearSessionData() {
+        _riwayatState.update { UiState.Idle }
+        _checkoutState.update { UiState.Idle }
+        _detailState.update { UiState.Idle }
+        _paymentState.update { UiState.Idle }
     }
 
     fun fetchRiwayat() {
         viewModelScope.launch {
-            _riwayatState.value = UiState.Loading
+            _riwayatState.update { UiState.Loading }
             try {
-                _riwayatState.value = repository.getRiwayatPemesanan()
+                _riwayatState.update { repository.getRiwayatPemesanan() }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _riwayatState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+                _riwayatState.update { UiState.Error(e.toUserFriendlyMessage()) }
             }
         }
     }
@@ -60,135 +74,182 @@ class PemesananViewModel(
         eventImageUrl: String? = null
     ) {
         viewModelScope.launch {
-            _checkoutState.value = UiState.Loading
+            _checkoutState.update { UiState.Loading }
             try {
+                val qty = jumlahTiket.coerceIn(1, 10)
                 val transaksi = TransaksiModel(
                     eventId = eventId,
-                    jumlahTiket = jumlahTiket.coerceIn(1, 10),
+                    jumlahTiket = qty,
                     catatan = catatan.trim().ifBlank { null },
-                    totalHarga = pricePerTicket * jumlahTiket.coerceIn(1, 10),
+                    totalHarga = pricePerTicket * qty,
                     status = "MENUNGGU_PEMBAYARAN",
                     statusPembayaran = "PENDING",
                     eventTitle = eventTitle,
                     eventDate = eventDate,
                     eventImageUrl = eventImageUrl
                 )
-                _checkoutState.value = repository.checkout(transaksi)
+                _checkoutState.update { repository.checkout(transaksi) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _checkoutState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan saat checkout")
+                _checkoutState.update { UiState.Error(e.toUserFriendlyMessage()) }
             }
         }
     }
 
     fun payNow(transaksiId: String, bankCode: String) {
         viewModelScope.launch {
-            _paymentState.value = UiState.Loading
+            _paymentState.update { UiState.Loading }
             try {
-                _paymentLoadingMessage.value = "Menghubungkan ke sistem pembayaran..."
-                delay(1000)
-                _paymentLoadingMessage.value = "Memverifikasi informasi pembayaran..."
-                delay(1200)
-                _paymentLoadingMessage.value = "Memproses pembayaran..."
-                delay(1000)
+                if (paymentStepDelayMs > 0) {
+                    _paymentLoadingMessage.update { "Menghubungkan ke sistem pembayaran..." }
+                    delay(paymentStepDelayMs)
+                    _paymentLoadingMessage.update { "Memverifikasi informasi pembayaran..." }
+                    delay(paymentStepDelayMs)
+                    _paymentLoadingMessage.update { "Memproses pembayaran..." }
+                    delay(paymentStepDelayMs)
+                }
 
                 val result = repository.processPayment(transaksiId, bankCode)
-                _paymentState.value = result
+                _paymentState.update { result }
                 if (result is UiState.Success) {
-                    _detailState.value = UiState.Success(result.data)
+                    _detailState.update { UiState.Success(result.data) }
                     fetchRiwayat()
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _paymentState.value = UiState.Error(e.localizedMessage ?: "Gagal memproses pembayaran")
+                _paymentState.update { UiState.Error(e.toUserFriendlyMessage()) }
             }
         }
     }
 
     fun renewPayment(transaksiId: String, bankCode: String) {
         viewModelScope.launch {
-            _paymentState.value = UiState.Loading
+            _paymentState.update { UiState.Loading }
             try {
                 val result = repository.renewPaymentInstruction(transaksiId, bankCode)
-                _paymentState.value = result
+                _paymentState.update { result }
                 if (result is UiState.Success) {
-                    _detailState.value = UiState.Success(result.data)
+                    _detailState.update { UiState.Success(result.data) }
                     fetchRiwayat()
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _paymentState.value = UiState.Error(e.localizedMessage ?: "Gagal memperbarui instruksi pembayaran")
+                _paymentState.update { UiState.Error(e.toUserFriendlyMessage()) }
             }
         }
     }
 
     fun fetchDetailById(transaksiId: String) {
         viewModelScope.launch {
-            _detailState.value = UiState.Loading
+            _detailState.update { UiState.Loading }
             try {
                 val result = repository.getPemesananById(transaksiId)
-                _detailState.value = result
+                _detailState.update { result }
                 if (result is UiState.Success) {
-                    _paymentState.value = UiState.Idle
+                    _paymentState.update { UiState.Idle }
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _detailState.value = UiState.Error(e.localizedMessage ?: "Terjadi kesalahan")
+                _detailState.update { UiState.Error(e.toUserFriendlyMessage()) }
             }
         }
     }
 
-    fun updateStatus(transaksiId: String, status: String) {
+    fun updateStatus(
+        transaksiId: String,
+        status: String,
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             try {
-                repository.updateStatusPemesanan(transaksiId, status)
-                val currentDetail = (_detailState.value as? UiState.Success)?.data
-                if (currentDetail != null) {
-                    _detailState.value = UiState.Success(currentDetail.copy(status = status))
-                    fetchRiwayat()
+                when (val result = repository.updateStatusPemesanan(transaksiId, status)) {
+                    is UiState.Success -> {
+                        val currentDetail = (_detailState.value as? UiState.Success)?.data
+                        if (currentDetail != null) {
+                            _detailState.update { UiState.Success(currentDetail.copy(status = status)) }
+                        }
+                        fetchRiwayat()
+                    }
+                    is UiState.Error -> {
+                        onError(result.message)
+                    }
+                    else -> {}
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _detailState.value = UiState.Error(e.localizedMessage ?: "Gagal memperbarui status")
+                onError(e.toUserFriendlyMessage())
             }
         }
     }
 
-    fun cancelPemesanan(transaksiId: String) {
+    fun cancelPemesanan(
+        transaksiId: String,
+        onComplete: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             try {
-                repository.batalkanPemesanan(transaksiId)
-                val currentDetail = (_detailState.value as? UiState.Success)?.data
-                if (currentDetail != null) {
-                    _detailState.value = UiState.Success(currentDetail.copy(status = "DIBATALKAN"))
+                when (val result = repository.batalkanPemesanan(transaksiId)) {
+                    is UiState.Success -> {
+                        val currentDetail = (_detailState.value as? UiState.Success)?.data
+                        if (currentDetail != null) {
+                            _detailState.update { UiState.Success(currentDetail.copy(status = "DIBATALKAN", statusPembayaran = "DIBATALKAN")) }
+                        }
+                        fetchRiwayat()
+                        onComplete()
+                    }
+                    is UiState.Error -> {
+                        onError(result.message)
+                    }
+                    else -> {}
                 }
-                fetchRiwayat()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _detailState.value = UiState.Error(e.localizedMessage ?: "Gagal membatalkan pesanan")
+                onError(e.toUserFriendlyMessage())
             }
         }
     }
 
-    fun cancelWithReason(transaksiId: String, reason: String) {
+    fun cancelWithReason(
+        transaksiId: String,
+        reason: String,
+        onComplete: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             try {
-                repository.batalkanPemesananWithReason(transaksiId, reason)
-                val currentDetail = (_detailState.value as? UiState.Success)?.data
-                if (currentDetail != null) {
-                    _detailState.value = UiState.Success(currentDetail.copy(status = "DIBATALKAN"))
+                when (val result = repository.batalkanPemesananWithReason(transaksiId, reason)) {
+                    is UiState.Success -> {
+                        val currentDetail = (_detailState.value as? UiState.Success)?.data
+                        if (currentDetail != null) {
+                            _detailState.update {
+                                UiState.Success(
+                                    currentDetail.copy(
+                                        status = "DIBATALKAN",
+                                        statusPembayaran = "DIBATALKAN",
+                                        catatan = "Dibatalkan/Refund - Alasan: $reason"
+                                    )
+                                )
+                            }
+                        }
+                        fetchRiwayat()
+                        onComplete()
+                    }
+                    is UiState.Error -> {
+                        onError(result.message)
+                    }
+                    else -> {}
                 }
-                fetchRiwayat()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _detailState.value = UiState.Error(e.localizedMessage ?: "Gagal memproses refund")
+                onError(e.toUserFriendlyMessage())
             }
         }
     }

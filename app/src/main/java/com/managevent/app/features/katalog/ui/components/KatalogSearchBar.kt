@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -36,7 +37,7 @@ fun KatalogSearchBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 4.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(Color(0xFFF3F4F8))
             .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -74,6 +75,20 @@ fun KatalogSearchBar(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+
+        if (query.isNotEmpty()) {
+            IconButton(
+                onClick = { onQueryChange("") },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Hapus Pencarian",
+                    tint = Color(0xFF6C757D),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
         IconButton(

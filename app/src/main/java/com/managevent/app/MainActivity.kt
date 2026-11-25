@@ -4,14 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.core.content.edit
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.managevent.app.core.components.AppBottomBar
@@ -29,19 +31,26 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    val prefs = remember { getSharedPreferences("managevent_prefs", MODE_PRIVATE) }
+                    val onboardingSeen = remember { prefs.getBoolean("onboarding_seen", false) }
+                    val initialDestination = remember {
+                        if (onboardingSeen) Screen.KatalogList.route else Screen.Onboarding.route
+                    }
+
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
-                    // Sembunyikan BottomBar pada layar Auth / Onboarding / Form / Ulasan
-                    val showBottomBar = (currentRoute != Screen.Onboarding.route) &&
-                            (currentRoute != Screen.Login.route) &&
-                            (currentRoute != Screen.Register.route) &&
-                            (currentRoute != Screen.AgendaForm.route) &&
-                            (currentRoute != Screen.KatalogForm.route) &&
-                            (currentRoute != Screen.UlasanForm.route) &&
-                            (currentRoute != Screen.UlasanList.route) && // <-- TAMBAHAN
-                            (currentRoute != Screen.Checkout.route)
+                    val topLevelRoutes = remember {
+                        setOf(
+                            Screen.KatalogList.route,
+                            Screen.Wishlist.route,
+                            Screen.RiwayatPemesanan.route,
+                            Screen.AgendaList.route,
+                            Screen.Profile.route
+                        )
+                    }
+                    val showBottomBar = currentRoute in topLevelRoutes
 
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
@@ -51,19 +60,12 @@ class MainActivity : ComponentActivity() {
                                 AppBottomBar(
                                     currentRoute = currentRoute,
                                     onNavigate = { route ->
-                                        if (route == Screen.KatalogList.route) {
-                                            navController.navigate(Screen.KatalogList.route) {
-                                                popUpTo(Screen.KatalogList.route) { inclusive = true }
-                                                launchSingleTop = true
+                                        navController.navigate(route) {
+                                            popUpTo(Screen.KatalogList.route) {
+                                                saveState = (route != Screen.KatalogList.route)
                                             }
-                                        } else {
-                                            navController.navigate(route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
+                                            launchSingleTop = true
+                                            restoreState = (route != Screen.KatalogList.route)
                                         }
                                     }
                                 )
@@ -72,8 +74,13 @@ class MainActivity : ComponentActivity() {
                     ) { innerPadding ->
                         AppNavHost(
                             navController = navController,
-                            startDestination = Screen.KatalogList.route,
-                            modifier = Modifier.padding(innerPadding)
+                            startDestination = initialDestination,
+                            onOnboardingCompleted = {
+                                prefs.edit { putBoolean("onboarding_seen", true) }
+                            },
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding)
                         )
                     }
                 }

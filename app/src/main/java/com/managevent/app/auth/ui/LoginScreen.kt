@@ -21,9 +21,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +34,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,25 +58,52 @@ import androidx.compose.ui.unit.sp
 import com.managevent.app.auth.data.UserModel
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
+import com.managevent.app.core.theme.Background
+import com.managevent.app.core.theme.InputFieldBackground
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.Outline
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
 import com.managevent.app.core.util.UiState
 
 @Composable
 fun LoginScreen(
-    loginState: UiState<UserModel> = UiState.Idle,
     modifier: Modifier = Modifier,
+    loginState: UiState<UserModel> = UiState.Idle,
+    resetPasswordState: UiState<String> = UiState.Idle,
     onLoginClick: (String, String) -> Unit = { _, _ -> },
-    onNavigateToRegister: () -> Unit = {}
+    onForgotPasswordClick: (String) -> Unit = {},
+    onClearResetState: () -> Unit = {},
+    onNavigateToRegister: () -> Unit = {},
+    onBackClick: (() -> Unit)? = null
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var showForgotDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(loginState) {
         if (loginState is UiState.Error) {
             Toast.makeText(context, loginState.message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(resetPasswordState) {
+        when (resetPasswordState) {
+            is UiState.Success -> {
+                Toast.makeText(context, resetPasswordState.data, Toast.LENGTH_LONG).show()
+                showForgotDialog = false
+                onClearResetState()
+            }
+            is UiState.Error -> {
+                Toast.makeText(context, resetPasswordState.message, Toast.LENGTH_SHORT).show()
+                onClearResetState()
+            }
+            else -> {}
         }
     }
 
@@ -90,10 +123,11 @@ fun LoginScreen(
         loginState = loginState,
         onLoginClick = {
             var hasError = false
-            if (email.isBlank()) {
+            val trimmedEmail = email.trim()
+            if (trimmedEmail.isBlank()) {
                 emailError = "Harap isi email Anda"
                 hasError = true
-            } else if (!email.contains("@")) {
+            } else if (!trimmedEmail.contains("@")) {
                 emailError = "Format email tidak valid"
                 hasError = true
             }
@@ -106,14 +140,92 @@ fun LoginScreen(
             }
 
             if (!hasError) {
-                onLoginClick(email, password)
+                onLoginClick(trimmedEmail, password)
             }
         },
+        onForgotPasswordClick = { showForgotDialog = true },
         onNavigateToRegister = onNavigateToRegister,
+        onBackClick = onBackClick,
         modifier = modifier
     )
+
+    if (showForgotDialog) {
+        var resetEmail by remember(email) { mutableStateOf(email.trim()) }
+        var resetEmailError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (resetPasswordState !is UiState.Loading) showForgotDialog = false
+            },
+            title = {
+                Text(
+                    text = "Reset Kata Sandi",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Masukkan email akun Anda. Kami akan mengirimkan tautan pemulihan kata sandi.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = {
+                            resetEmail = it
+                            resetEmailError = null
+                        },
+                        placeholder = { Text("nama@email.com") },
+                        isError = resetEmailError != null,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    if (resetEmailError != null) {
+                        Text(
+                            text = resetEmailError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = resetPasswordState !is UiState.Loading,
+                    onClick = {
+                        val trimmed = resetEmail.trim()
+                        if (trimmed.isBlank() || !trimmed.contains("@")) {
+                            resetEmailError = "Format email tidak valid"
+                        } else {
+                            onForgotPasswordClick(trimmed)
+                        }
+                    }
+                ) {
+                    Text(
+                        text = if (resetPasswordState is UiState.Loading) "Mengirim..." else "Kirim Tautan",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryContainer
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = resetPasswordState !is UiState.Loading,
+                    onClick = { showForgotDialog = false }
+                ) {
+                    Text("Batal")
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
     email: String,
@@ -124,16 +236,34 @@ fun LoginContent(
     passwordError: String?,
     loginState: UiState<UserModel>,
     onLoginClick: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBackClick: (() -> Unit)? = null
 ) {
     var isPasswordVisible by remember { mutableStateOf(false) }
     val isServerAuthError = loginState is UiState.Error
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFCF8FF),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            if (onBackClick != null) {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Kembali"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+                )
+            }
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -158,13 +288,13 @@ fun LoginContent(
                         modifier = Modifier
                             .size(12.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFFC6955))
+                            .background(SecondaryContainer)
                     )
                     Text(
                         text = "MANAGEVENT",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF3525CD),
+                            color = PrimaryContainer,
                             letterSpacing = 1.sp
                         )
                     )
@@ -176,7 +306,7 @@ fun LoginContent(
                     text = "Masuk Akun",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF181445),
+                        color = OnBackground,
                         fontSize = 24.sp
                     )
                 )
@@ -184,13 +314,12 @@ fun LoginContent(
                 Text(
                     text = "Kelola event, tiket, dan pesanan Anda dalam satu aplikasi.",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFF464555),
+                        color = OnSurfaceVariant,
                         fontSize = 13.sp
                     ),
                     modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
                 )
 
-                // Top Server Error Banner (Single display)
                 if (loginState is UiState.Error) {
                     Text(
                         text = loginState.message,
@@ -202,12 +331,11 @@ fun LoginContent(
                     )
                 }
 
-                // Email Input Field
                 Text(
                     text = "Email",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = if (emailError != null || isServerAuthError) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                        color = if (emailError != null || isServerAuthError) MaterialTheme.colorScheme.error else OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -220,9 +348,9 @@ fun LoginContent(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3525CD),
-                        unfocusedContainerColor = Color(0xFFF6F2FF),
-                        focusedContainerColor = Color(0xFFF6F2FF),
+                        focusedBorderColor = PrimaryContainer,
+                        unfocusedContainerColor = InputFieldBackground,
+                        focusedContainerColor = InputFieldBackground,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorContainerColor = Color(0xFFFFF0F0)
                     )
@@ -237,12 +365,11 @@ fun LoginContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Password Input Field
                 Text(
                     text = "Password",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = if (passwordError != null || isServerAuthError) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                        color = if (passwordError != null || isServerAuthError) MaterialTheme.colorScheme.error else OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -259,15 +386,15 @@ fun LoginContent(
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = "Tampilkan Password",
-                                tint = Color(0xFF777587)
+                                tint = Outline
                             )
                         }
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3525CD),
-                        unfocusedContainerColor = Color(0xFFF6F2FF),
-                        focusedContainerColor = Color(0xFFF6F2FF),
+                        focusedBorderColor = PrimaryContainer,
+                        unfocusedContainerColor = InputFieldBackground,
+                        focusedContainerColor = InputFieldBackground,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorContainerColor = Color(0xFFFFF0F0)
                     )
@@ -289,10 +416,10 @@ fun LoginContent(
                     Text(
                         text = "Lupa Password?",
                         style = MaterialTheme.typography.labelMedium.copy(
-                            color = Color(0xFF3525CD),
+                            color = PrimaryContainer,
                             fontWeight = FontWeight.Bold
                         ),
-                        modifier = Modifier.clickable { }
+                        modifier = Modifier.clickable { onForgotPasswordClick() }
                     )
                 }
 
@@ -305,7 +432,7 @@ fun LoginContent(
                             .height(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Color(0xFFFC6955))
+                        CircularProgressIndicator(color = SecondaryContainer)
                     }
                 } else {
                     AppButton(
@@ -324,12 +451,12 @@ fun LoginContent(
                 ) {
                     Text(
                         text = "Belum punya akun? ",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
+                        style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
                     )
                     Text(
                         text = "Daftar",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color(0xFF3525CD),
+                            color = PrimaryContainer,
                             fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier.clickable { onNavigateToRegister() }
@@ -353,6 +480,7 @@ fun LoginContentPreview() {
             passwordError = null,
             loginState = UiState.Idle,
             onLoginClick = {},
+            onForgotPasswordClick = {},
             onNavigateToRegister = {}
         )
     }

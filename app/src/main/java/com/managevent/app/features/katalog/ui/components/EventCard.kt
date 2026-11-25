@@ -39,9 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.katalog.data.EventModel
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun EventCard(
@@ -50,12 +51,7 @@ fun EventCard(
     onFavoriteToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val formattedPrice = try {
-        val formatter = NumberFormat.getInstance(Locale.forLanguageTag("id-ID"))
-        "Rp " + formatter.format(event.price.toLong())
-    } catch (_: Exception) {
-        "Rp ${event.price.toLong()}"
-    }
+    val formattedPrice = formatRupiah(event.price)
 
     Card(
         modifier = modifier
@@ -151,7 +147,7 @@ fun EventCard(
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
                         contentDescription = "Tanggal",
-                        tint = Color(0xFF3F51B5),
+                        tint = PrimaryContainer,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
@@ -203,7 +199,7 @@ fun EventCard(
                     text = formattedPrice,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE55335),
+                        color = SecondaryContainer,
                         fontSize = 15.sp
                     )
                 )

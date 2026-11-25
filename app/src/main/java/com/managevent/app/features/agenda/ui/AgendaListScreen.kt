@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,16 +59,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.managevent.app.core.components.StatusChip
+import com.managevent.app.core.components.StatusType
+import com.managevent.app.core.theme.Background
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.SecondaryContainer
 import com.managevent.app.core.util.UiState
 import com.managevent.app.features.agenda.data.AgendaModel
 import com.managevent.app.features.agenda.data.BookedEventModel
+import kotlinx.coroutines.flow.SharedFlow
 
 @Composable
 fun AgendaListScreen(
     state: UiState<List<AgendaModel>>,
     modifier: Modifier = Modifier,
     bookedEvent: BookedEventModel? = null,
+    messageFlow: SharedFlow<String>? = null,
     onBack: () -> Unit = {},
     onAddNote: () -> Unit = {},
     onEditNote: (AgendaModel) -> Unit = {},
@@ -74,6 +82,12 @@ fun AgendaListScreen(
     onDeleteNote: (String) -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(messageFlow) {
+        messageFlow?.collect { msg ->
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
 
     AgendaListContent(
         state = state,
@@ -104,7 +118,9 @@ fun AgendaListContent(
     var noteToDelete by remember { mutableStateOf<AgendaModel?>(null) }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text("Daftar Agenda") },
@@ -120,7 +136,7 @@ fun AgendaListContent(
                 onClick = onAddNote,
                 icon = { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) },
                 text = { Text("Tambah Agenda", fontWeight = FontWeight.Bold) },
-                containerColor = Color(0xFFFC6955),
+                containerColor = SecondaryContainer,
                 contentColor = Color.White
             )
         },
@@ -152,14 +168,16 @@ fun AgendaListContent(
                         ),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        item {
-                            EventContextCard(
-                                title = bookedEvent?.title ?: "Pameran Pernikahan Nusantara 2026",
-                                date = bookedEvent?.date ?: "18 Juli 2026",
-                                location = bookedEvent?.location ?: "Grand Ballroom Jakarta",
-                                status = bookedEvent?.status ?: "Berjalan",
-                                imageUrl = bookedEvent?.imageUrl
-                            )
+                        if (bookedEvent != null) {
+                            item {
+                                EventContextCard(
+                                    title = bookedEvent.title,
+                                    date = bookedEvent.date.orEmpty().ifBlank { "-" },
+                                    location = bookedEvent.location.orEmpty().ifBlank { "-" },
+                                    status = bookedEvent.status,
+                                    imageUrl = bookedEvent.imageUrl
+                                )
+                            }
                         }
 
                         if (state.data.isEmpty()) {
@@ -178,7 +196,7 @@ fun AgendaListContent(
                                         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
                                     )
                                 }
-                                items(pendingNotes, key = { it.id ?: it.title }) { note ->
+                                items(pendingNotes, key = { it.id ?: "${it.title}_${it.date}" }) { note ->
                                     NoteCard(
                                         note = note,
                                         onToggleDone = { onToggleDone(note) },
@@ -210,7 +228,7 @@ fun AgendaListContent(
                                         )
                                     }
                                 }
-                                items(completedNotes, key = { it.id ?: it.title }) { note ->
+                                items(completedNotes, key = { it.id ?: "${it.title}_${it.date}" }) { note ->
                                     NoteCard(
                                         note = note,
                                         onToggleDone = { onToggleDone(note) },
@@ -321,19 +339,7 @@ private fun EventContextCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xFFE6F4EA))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = status,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF005338)
-                        )
-                    }
+                    StatusChip(status = StatusType.fromStatus(status))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

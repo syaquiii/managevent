@@ -346,7 +346,7 @@ fun AgendaFormContent(
                                     else MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = dateInput.ifBlank { "Pilih tanggal target 2026" },
+                                    text = dateInput.ifBlank { "Pilih tanggal target" },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = if (dateInput.isBlank()) {
                                         if (dateError != null) MaterialTheme.colorScheme.error

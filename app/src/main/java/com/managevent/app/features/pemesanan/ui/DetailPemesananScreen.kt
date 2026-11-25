@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,19 +55,18 @@ import com.managevent.app.core.components.AppButtonVariant
 import com.managevent.app.core.components.LoadingScreen
 import com.managevent.app.core.components.StatusChip
 import com.managevent.app.core.components.StatusType
+import com.managevent.app.core.theme.ErrorContainer
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnErrorContainer
 import com.managevent.app.core.theme.PrimaryContainer
 import com.managevent.app.core.theme.Surface
 import com.managevent.app.core.theme.SurfaceContainer
 import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatDateTimeId
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.pemesanan.data.TransaksiModel
-import java.text.NumberFormat
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun DetailPemesananScreen(
@@ -100,8 +101,10 @@ fun DetailPemesananContent(
     onNavigateToPayment: (String) -> Unit = {}
 ) {
     val transaction = (detailState as? UiState.Success)?.data
-    val isOngoing = transaction?.status.equals("Berjalan", ignoreCase = true) || transaction?.status.equals("BERJALAN", ignoreCase = true)
-    val isUnpaid = transaction?.status.equals("MENUNGGU_PEMBAYARAN", ignoreCase = true) || transaction?.statusPembayaran.equals("PENDING", ignoreCase = true) || transaction?.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)
+    val statusType = transaction?.let { StatusType.fromStatus(it.status, it.statusPembayaran) }
+    val isOngoing = statusType == StatusType.BERJALAN
+    val isUnpaid = statusType == StatusType.MENUNGGU_PEMBAYARAN
+    val isCancelled = statusType == StatusType.DIBATALKAN
 
     var showRefundDialog by remember { mutableStateOf(false) }
     val refundReasons = listOf("Perubahan jadwal / acara", "Salah memilih jenis tiket", "Kendala pribadi / darurat", "Lainnya")
@@ -110,6 +113,7 @@ fun DetailPemesananContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -131,7 +135,7 @@ fun DetailPemesananContent(
             )
         },
         bottomBar = {
-            if (transaction != null) {
+            if (transaction != null && !isCancelled) {
                 if (isUnpaid) {
                     Surface(color = Surface, shadowElevation = 8.dp) {
                         Column(
@@ -141,7 +145,7 @@ fun DetailPemesananContent(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             AppButton(
-                                text = if (transaction.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)) "Buat Instruksi Pembayaran Baru  →" else "Lanjutkan Pembayaran  →",
+                                text = if (transaction.statusPembayaran.equals("KEDALUWARSA", ignoreCase = true)) "Buat Instruksi Pembayaran Baru →" else "Lanjutkan Pembayaran →",
                                 onClick = { onNavigateToPayment(transaction.id) },
                                 variant = AppButtonVariant.CONVERSION_CTA
                             )
@@ -174,62 +178,6 @@ fun DetailPemesananContent(
                     }
                 }
             }
-
-            if (showRefundDialog) {
-                AlertDialog(
-                    onDismissRequest = { showRefundDialog = false },
-                    title = {
-                        Text(
-                            text = "Alasan Pembatalan & Refund",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Silakan pilih alasan pembatalan pesanan Anda:",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            refundReasons.forEach { reason ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { selectedReason = reason }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    RadioButton(
-                                        selected = selectedReason == reason,
-                                        onClick = { selectedReason = reason }
-                                    )
-                                    Text(
-                                        text = reason,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        AppButton(
-                            text = "Ajukan Refund",
-                            onClick = {
-                                showRefundDialog = false
-                                onCancelWithReason(selectedReason)
-                            },
-                            variant = AppButtonVariant.CONVERSION_CTA
-                        )
-                    },
-                    dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { showRefundDialog = false }) {
-                            Text("Batal")
-                        }
-                    }
-                )
-            }
         }
     ) { innerPadding ->
         when (detailState) {
@@ -260,6 +208,8 @@ fun DetailPemesananContent(
             }
             is UiState.Success -> {
                 val order = detailState.data
+                val orderStatusType = StatusType.fromStatus(order.status, order.statusPembayaran)
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -295,13 +245,7 @@ fun DetailPemesananContent(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        StatusChip(
-                            status = if (order.status.equals("Berjalan", ignoreCase = true)) {
-                                StatusType.BERJALAN
-                            } else {
-                                StatusType.SELESAI
-                            }
-                        )
+                        StatusChip(status = orderStatusType)
                     }
 
                     Card(
@@ -366,8 +310,18 @@ fun DetailPemesananContent(
                             )
                             OrderDetailRow(
                                 label = "Tanggal pemesanan",
-                                value = formatDateTime(order.createdAt)
+                                value = formatDateTimeId(order.createdAt)
                             )
+                            OrderDetailRow(
+                                label = "Metode pembayaran",
+                                value = formatBankName(order.metodePembayaran)
+                            )
+                            if (!order.kodeReferensi.isNullOrBlank()) {
+                                OrderDetailRow(
+                                    label = "Kode referensi",
+                                    value = order.kodeReferensi
+                                )
+                            }
                             OrderDetailRow(
                                 label = "Jumlah tiket",
                                 value = "${order.jumlahTiket} tiket"
@@ -388,7 +342,7 @@ fun DetailPemesananContent(
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = formatOrderPrice(order.totalHarga),
+                                    text = formatRupiah(order.totalHarga),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryContainer
@@ -397,26 +351,128 @@ fun DetailPemesananContent(
                         }
                     }
 
-                    if (!isOngoing) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(SurfaceContainerLow)
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Pesanan ini telah selesai.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    when (orderStatusType) {
+                        StatusType.SELESAI -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SurfaceContainerLow)
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Pesanan ini telah selesai.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
+                        StatusType.DIBATALKAN -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(ErrorContainer)
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Pesanan ini telah dibatalkan.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnErrorContainer,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        StatusType.MENUNGGU_PEMBAYARAN -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(SurfaceContainerLow)
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Silakan selesaikan pembayaran untuk mengaktifkan tiket Anda.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        StatusType.BERJALAN -> Unit
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
+    }
+
+    if (showRefundDialog) {
+        AlertDialog(
+            onDismissRequest = { showRefundDialog = false },
+            title = {
+                Text(
+                    text = "Alasan Pembatalan & Refund",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Silakan pilih alasan pembatalan pesanan Anda:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    refundReasons.forEach { reason ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { selectedReason = reason }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            RadioButton(
+                                selected = selectedReason == reason,
+                                onClick = { selectedReason = reason }
+                            )
+                            Text(
+                                text = reason,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                AppButton(
+                    text = "Ajukan Refund",
+                    onClick = {
+                        showRefundDialog = false
+                        onCancelWithReason(selectedReason)
+                    },
+                    variant = AppButtonVariant.CONVERSION_CTA
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = { showRefundDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+}
+
+private fun formatBankName(code: String): String {
+    return when (code.lowercase()) {
+        "bca_va", "bca" -> "BCA Virtual Account"
+        "bri_va", "bri" -> "BRI Virtual Account"
+        "bni_va", "bni" -> "BNI Virtual Account"
+        "mandiri_va", "mandiri" -> "Mandiri Virtual Account"
+        else -> code.ifBlank { "-" }
     }
 }
 
@@ -468,36 +524,6 @@ private fun OrderDetailRow(
     }
 }
 
-private fun formatDateTime(isoString: String): String {
-    if (isoString.isBlank()) return "-"
-    return try {
-        val normalized = isoString.trim().replace(" ", "T")
-        val instant = Instant.parse(normalized)
-        val zdt = instant.atZone(ZoneId.systemDefault())
-        val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm 'WIB'", Locale.forLanguageTag("id-ID"))
-        formatter.format(zdt)
-    } catch (_: Exception) {
-        try {
-            val parts = isoString.trim().split("T", " ")
-            val datePart = parts.getOrNull(0) ?: ""
-            val timePart = parts.getOrNull(1)?.take(5) ?: ""
-            if (datePart.isNotBlank() && timePart.isNotBlank()) {
-                "$datePart, $timePart WIB"
-            } else {
-                isoString
-            }
-        } catch (_: Exception) {
-            isoString
-        }
-    }
-}
-
-private fun formatOrderPrice(amount: Double): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID"))
-    formatter.maximumFractionDigits = 0
-    return formatter.format(amount)
-}
-
 @Preview(showBackground = true)
 @Composable
 fun DetailPemesananContentPreview() {
@@ -512,7 +538,8 @@ fun DetailPemesananContentPreview() {
                     catatan = "Butuh kursi dekat panggung.",
                     totalHarga = 640000.0,
                     status = "Berjalan",
-                    createdAt = "2026-11-05",
+                    statusPembayaran = "BERHASIL",
+                    createdAt = "2026-11-05T10:15:00+00:00",
                     eventTitle = "Jakarta Jazz Symphony 2026",
                     eventDate = "22 Agustus 2026"
                 )

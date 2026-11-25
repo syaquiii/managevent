@@ -21,19 +21,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ConfirmationNumber
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,21 +53,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import com.managevent.app.auth.data.RegisterResult
 import com.managevent.app.auth.data.UserModel
 import com.managevent.app.core.components.AppButton
 import com.managevent.app.core.components.AppButtonVariant
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
+import com.managevent.app.core.theme.InputFieldBackground
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.OnBackground
+import com.managevent.app.core.theme.OnSurfaceVariant
+import com.managevent.app.core.theme.Outline
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.theme.SecondaryContainer
 import com.managevent.app.core.util.UiState
 
 @Composable
 fun RegisterScreen(
-    registerState: UiState<UserModel> = UiState.Idle,
     modifier: Modifier = Modifier,
+    registerState: UiState<RegisterResult> = UiState.Idle,
     onRegisterClick: (String, String, String, String) -> Unit = { _, _, _, _ -> },
+    onRegistrationComplete: (requiresEmailConfirmation: Boolean) -> Unit = {},
     onNavigateToLogin: () -> Unit = {}
 ) {
     var fullName by remember { mutableStateOf("") }
@@ -103,14 +122,16 @@ fun RegisterScreen(
         registerState = registerState,
         onRegisterClick = {
             var hasError = false
-            if (fullName.isBlank()) {
+            val trimmedName = fullName.trim()
+            val trimmedEmail = email.trim()
+            if (trimmedName.isBlank()) {
                 fullNameError = "Harap isi nama lengkap Anda"
                 hasError = true
             }
-            if (email.isBlank()) {
+            if (trimmedEmail.isBlank()) {
                 emailError = "Harap isi email Anda"
                 hasError = true
-            } else if (!email.contains("@")) {
+            } else if (!trimmedEmail.contains("@")) {
                 emailError = "Format email tidak valid"
                 hasError = true
             }
@@ -123,58 +144,60 @@ fun RegisterScreen(
             }
 
             if (!hasError) {
-                onRegisterClick(email, password, fullName, selectedRole)
+                onRegisterClick(trimmedEmail, password, trimmedName, selectedRole)
             }
         },
         onNavigateToLogin = onNavigateToLogin,
         modifier = modifier
     )
 
-    // Registration Success Dialog Notification
     if (registerState is UiState.Success) {
-        val user = registerState.data
+        val result = registerState.data
+        val user = result.user
         val roleTitle = if (user.role == "VENDOR") "Vendor / EO" else "Pemesan Tiket"
+        val displayName = user.fullName?.takeIf { it.isNotBlank() } ?: "Pengguna"
 
         AlertDialog(
-            onDismissRequest = { onNavigateToLogin() },
+            onDismissRequest = { onRegistrationComplete(result.requiresEmailConfirmation) },
             icon = {
                 Box(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE2DFFF)),
+                        .background(ActiveFilterChipBackground),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = Color(0xFF3525CD),
+                        tint = PrimaryContainer,
                         modifier = Modifier.size(32.dp)
                     )
                 }
             },
             title = {
                 Text(
-                    text = "Registrasi Berhasil 🎉",
+                    text = if (result.requiresEmailConfirmation) "Verifikasi Email Anda" else "Registrasi Berhasil",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF181445)
+                    color = OnBackground
                 )
             },
             text = {
                 Text(
-                    text = "Selamat datang, ${if (!user.fullName.isNullOrBlank()) user.fullName else "Pengguna"}! Akun Anda sebagai $roleTitle telah berhasil dibuat.",
+                    text = if (result.requiresEmailConfirmation) {
+                        "Akun $displayName sebagai $roleTitle berhasil dibuat. Silakan cek kotak masuk email ${user.email} untuk konfirmasi sebelum masuk."
+                    } else {
+                        "Selamat datang, $displayName! Akun Anda sebagai $roleTitle telah aktif dan siap digunakan."
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF464555)
+                    color = OnSurfaceVariant
                 )
             },
             confirmButton = {
                 AppButton(
-                    text = "Mulai Jelajahi Event",
-                    onClick = {
-                        Toast.makeText(context, "Selamat datang di Managevent!", Toast.LENGTH_SHORT).show()
-                        onNavigateToLogin()
-                    },
+                    text = if (result.requiresEmailConfirmation) "Ke Halaman Masuk" else "Mulai Jelajahi Event",
+                    onClick = { onRegistrationComplete(result.requiresEmailConfirmation) },
                     variant = AppButtonVariant.CONVERSION_CTA
                 )
             },
@@ -184,6 +207,7 @@ fun RegisterScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterContent(
     fullName: String,
@@ -197,15 +221,31 @@ fun RegisterContent(
     passwordError: String?,
     selectedRole: String,
     onRoleChange: (String) -> Unit,
-    registerState: UiState<UserModel>,
+    registerState: UiState<RegisterResult>,
     onRegisterClick: () -> Unit,
     onNavigateToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFCF8FF),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        containerColor = Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToLogin) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Kembali"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+            )
+        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -217,7 +257,7 @@ fun RegisterContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Center
@@ -230,13 +270,13 @@ fun RegisterContent(
                         modifier = Modifier
                             .size(12.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFFC6955))
+                            .background(SecondaryContainer)
                     )
                     Text(
                         text = "MANAGEVENT",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF3525CD),
+                            color = PrimaryContainer,
                             letterSpacing = 1.sp
                         )
                     )
@@ -248,7 +288,7 @@ fun RegisterContent(
                     text = "Buat Akun",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF181445),
+                        color = OnBackground,
                         fontSize = 24.sp
                     )
                 )
@@ -256,7 +296,7 @@ fun RegisterContent(
                 Text(
                     text = "Daftar untuk pesan tiket dan kelola persiapan event Anda.",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFF464555),
+                        color = OnSurfaceVariant,
                         fontSize = 13.sp
                     ),
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -277,7 +317,7 @@ fun RegisterContent(
                     text = "Daftar Sebagai",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF181445)
+                        color = OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -303,7 +343,7 @@ fun RegisterContent(
                                         imageVector = roleIcon,
                                         contentDescription = null,
                                         modifier = Modifier.size(15.dp),
-                                        tint = if (isSelected) Color(0xFF3525CD) else Color(0xFF464555)
+                                        tint = if (isSelected) PrimaryContainer else OnSurfaceVariant
                                     )
                                     Text(
                                         text = roleLabel,
@@ -316,10 +356,10 @@ fun RegisterContent(
                             },
                             shape = RoundedCornerShape(12.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFFE2DFFF),
-                                selectedLabelColor = Color(0xFF3525CD),
-                                containerColor = Color(0xFFF6F2FF),
-                                labelColor = Color(0xFF464555)
+                                selectedContainerColor = ActiveFilterChipBackground,
+                                selectedLabelColor = PrimaryContainer,
+                                containerColor = InputFieldBackground,
+                                labelColor = OnSurfaceVariant
                             ),
                             border = null,
                             modifier = Modifier
@@ -331,12 +371,11 @@ fun RegisterContent(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Full Name Field
                 Text(
                     text = "Nama Lengkap",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = if (fullNameError != null) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                        color = if (fullNameError != null) MaterialTheme.colorScheme.error else OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -349,9 +388,9 @@ fun RegisterContent(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3525CD),
-                        unfocusedContainerColor = Color(0xFFF6F2FF),
-                        focusedContainerColor = Color(0xFFF6F2FF),
+                        focusedBorderColor = PrimaryContainer,
+                        unfocusedContainerColor = InputFieldBackground,
+                        focusedContainerColor = InputFieldBackground,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorContainerColor = Color(0xFFFFF0F0)
                     )
@@ -366,12 +405,11 @@ fun RegisterContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Email Field
                 Text(
                     text = "Email",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = if (emailError != null) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                        color = if (emailError != null) MaterialTheme.colorScheme.error else OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -384,9 +422,9 @@ fun RegisterContent(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3525CD),
-                        unfocusedContainerColor = Color(0xFFF6F2FF),
-                        focusedContainerColor = Color(0xFFF6F2FF),
+                        focusedBorderColor = PrimaryContainer,
+                        unfocusedContainerColor = InputFieldBackground,
+                        focusedContainerColor = InputFieldBackground,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorContainerColor = Color(0xFFFFF0F0)
                     )
@@ -401,12 +439,11 @@ fun RegisterContent(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Password Field
                 Text(
                     text = "Password",
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        color = if (passwordError != null) MaterialTheme.colorScheme.error else Color(0xFF181445)
+                        color = if (passwordError != null) MaterialTheme.colorScheme.error else OnBackground
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -417,11 +454,21 @@ fun RegisterContent(
                     isError = passwordError != null,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Tampilkan Password",
+                                tint = Outline
+                            )
+                        }
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3525CD),
-                        unfocusedContainerColor = Color(0xFFF6F2FF),
-                        focusedContainerColor = Color(0xFFF6F2FF),
+                        focusedBorderColor = PrimaryContainer,
+                        unfocusedContainerColor = InputFieldBackground,
+                        focusedContainerColor = InputFieldBackground,
                         errorBorderColor = MaterialTheme.colorScheme.error,
                         errorContainerColor = Color(0xFFFFF0F0)
                     )
@@ -443,7 +490,7 @@ fun RegisterContent(
                             .height(48.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Color(0xFF3525CD))
+                        CircularProgressIndicator(color = PrimaryContainer)
                     }
                 } else {
                     AppButton(
@@ -462,12 +509,12 @@ fun RegisterContent(
                 ) {
                     Text(
                         text = "Sudah punya akun? ",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF464555))
+                        style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
                     )
                     Text(
                         text = "Masuk",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color(0xFF3525CD),
+                            color = PrimaryContainer,
                             fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier.clickable { onNavigateToLogin() }
@@ -507,15 +554,16 @@ fun RegisterSuccessDialogPreview() {
     ManageventTheme {
         RegisterScreen(
             registerState = UiState.Success(
-                UserModel(
-                    id = "usr-1",
-                    email = "sarah@example.com",
-                    fullName = "Sarah Wijaya",
-                    role = "PEMESAN"
+                RegisterResult(
+                    user = UserModel(
+                        id = "usr-1",
+                        email = "sarah@example.com",
+                        fullName = "Sarah Wijaya",
+                        role = "PEMESAN"
+                    ),
+                    requiresEmailConfirmation = false
                 )
-            ),
-            onRegisterClick = { _, _, _, _ -> },
-            onNavigateToLogin = {}
+            )
         )
     }
 }

@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,35 +57,34 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.managevent.app.core.theme.ActiveFilterChipBackground
+import com.managevent.app.core.theme.Background
 import com.managevent.app.core.theme.ManageventTheme
+import com.managevent.app.core.theme.PrimaryContainer
+import com.managevent.app.core.util.UiState
 import com.managevent.app.features.katalog.data.EventModel
-import com.managevent.app.features.katalog.data.KatalogRepository
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
 fun KatalogFormScreen(
-    initialEvent: EventModel? = null,
     modifier: Modifier = Modifier,
+    initialEvent: EventModel? = null,
+    formState: UiState<String> = UiState.Idle,
     onBackClick: () -> Unit = {},
-    onSubmitEvent: (EventModel) -> Unit = {}
+    onSubmitEvent: (EventModel, ByteArray?) -> Unit = { _, _ -> }
 ) {
-    var title by remember { mutableStateOf(initialEvent?.title ?: "") }
-    var category by remember { mutableStateOf(initialEvent?.category ?: "Pernikahan") }
-    var date by remember { mutableStateOf(initialEvent?.date ?: "") }
-    var location by remember { mutableStateOf(initialEvent?.location ?: "") }
-    var priceInput by remember { mutableStateOf(initialEvent?.price?.roundToInt()?.toString() ?: "") }
-    var description by remember { mutableStateOf(initialEvent?.description ?: "") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    
-    // For Image Picker
+    var title by remember(initialEvent) { mutableStateOf(initialEvent?.title ?: "") }
+    var category by remember(initialEvent) { mutableStateOf(initialEvent?.category?.ifBlank { "Pernikahan" } ?: "Pernikahan") }
+    var date by remember(initialEvent) { mutableStateOf(initialEvent?.date ?: "") }
+    var location by remember(initialEvent) { mutableStateOf(initialEvent?.location ?: "") }
+    var priceInput by remember(initialEvent) { mutableStateOf(initialEvent?.price?.roundToInt()?.toString() ?: "") }
+    var description by remember(initialEvent) { mutableStateOf(initialEvent?.description ?: "") }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
+
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedImageBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var isUploading by remember { mutableStateOf(false) }
-    
+
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val repository = remember { KatalogRepository() }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -97,30 +94,35 @@ fun KatalogFormScreen(
                 try {
                     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     selectedImageBytes = bytes
+                    localErrorMessage = null
                 } catch (e: Exception) {
-                    errorMessage = "Gagal memuat gambar: ${e.message}"
+                    localErrorMessage = "Gagal memuat gambar: ${e.message}"
                 }
             }
         }
     )
 
+    val serverError = (formState as? UiState.Error)?.message
+    val displayError = localErrorMessage ?: serverError
+
     KatalogFormContent(
+        isEditMode = initialEvent != null,
         title = title,
-        onTitleChange = { title = it },
+        onTitleChange = { title = it; localErrorMessage = null },
         category = category,
         onCategoryChange = { category = it },
         date = date,
-        onDateChange = { date = it },
+        onDateChange = { date = it; localErrorMessage = null },
         location = location,
-        onLocationChange = { location = it },
+        onLocationChange = { location = it; localErrorMessage = null },
         priceInput = priceInput,
-        onPriceChange = { priceInput = it },
+        onPriceChange = { priceInput = it; localErrorMessage = null },
         description = description,
         onDescriptionChange = { description = it },
-        errorMessage = errorMessage,
+        errorMessage = displayError,
         existingImageUrl = initialEvent?.imageUrl,
         selectedImageUri = selectedImageUri,
-        isUploading = isUploading,
+        isSubmitting = formState is UiState.Loading,
         onPickImageClick = {
             photoPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -128,44 +130,30 @@ fun KatalogFormScreen(
         },
         onBackClick = onBackClick,
         onSubmit = {
-            if (title.isBlank() || date.isBlank() || location.isBlank() || priceInput.isBlank()) {
-                errorMessage = "Harap isi semua kolom wajib!"
-                return@KatalogFormContent
-            }
-            
-            val priceValue = priceInput.toDoubleOrNull() ?: 0.0
-            
-            scope.launch {
-                isUploading = true
-                var finalImageUrl = initialEvent?.imageUrl
-                
-                // Upload image if selected
-                if (selectedImageBytes != null) {
-                    val fileName = "poster_${System.currentTimeMillis()}.jpg"
-                    val uploadedUrl = repository.uploadPoster(fileName, selectedImageBytes!!)
-                    if (uploadedUrl != null) {
-                        finalImageUrl = uploadedUrl
-                    } else {
-                        errorMessage = "Gagal mengunggah gambar."
-                        isUploading = false
-                        return@launch
-                    }
+            val priceValue = priceInput.trim().toDoubleOrNull()
+            when {
+                title.isBlank() || date.isBlank() || location.isBlank() || priceInput.isBlank() -> {
+                    localErrorMessage = "Harap isi semua kolom wajib!"
                 }
-                
-                val newEvent = EventModel(
-                    id = initialEvent?.id ?: "",
-                    title = title,
-                    category = category,
-                    date = date,
-                    location = location,
-                    price = priceValue,
-                    imageUrl = if (!finalImageUrl.isNullOrBlank()) finalImageUrl else null,
-                    description = description,
-                    isFavorite = initialEvent?.isFavorite ?: false
-                )
-                
-                isUploading = false
-                onSubmitEvent(newEvent)
+                priceValue == null || priceValue < 0.0 -> {
+                    localErrorMessage = "Masukkan nominal harga yang valid."
+                }
+                else -> {
+                    localErrorMessage = null
+                    val newEvent = EventModel(
+                        id = initialEvent?.id ?: "",
+                        vendorId = initialEvent?.vendorId,
+                        title = title.trim(),
+                        category = category,
+                        date = date.trim(),
+                        location = location.trim(),
+                        price = priceValue,
+                        imageUrl = initialEvent?.imageUrl?.takeIf { it.isNotBlank() },
+                        description = description.trim(),
+                        isFavorite = initialEvent?.isFavorite ?: false
+                    )
+                    onSubmitEvent(newEvent, selectedImageBytes)
+                }
             }
         },
         modifier = modifier
@@ -175,6 +163,7 @@ fun KatalogFormScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KatalogFormContent(
+    isEditMode: Boolean,
     title: String,
     onTitleChange: (String) -> Unit,
     category: String,
@@ -190,24 +179,24 @@ fun KatalogFormContent(
     errorMessage: String?,
     existingImageUrl: String?,
     selectedImageUri: Uri?,
-    isUploading: Boolean,
+    isSubmitting: Boolean,
     onPickImageClick: () -> Unit,
     onBackClick: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val categories = listOf("Pernikahan", "Konser", "Seminar", "Ulang Tahun")
+    val categories = listOf("Pernikahan", "Konser", "Seminar", "Ulang Tahun", "Festival", "Pameran")
     var categoryExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color(0xFFFAFBFD),
+        containerColor = Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Tambah Event / Paket Baru",
+                        text = if (isEditMode) "Edit Event / Paket" else "Tambah Event / Paket Baru",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -252,15 +241,14 @@ fun KatalogFormContent(
                 OutlinedTextField(
                     value = title,
                     onValueChange = onTitleChange,
-                    label = { Text("Judul Event / Paket") },
+                    label = { Text("Judul Event / Paket *") },
                     placeholder = { Text("Contoh: Pameran Pernikahan Nusantara") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                 )
 
-                // Category Dropdown
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = !categoryExpanded },
@@ -276,7 +264,7 @@ fun KatalogFormContent(
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
                         shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                     )
                     ExposedDropdownMenu(
                         expanded = categoryExpanded,
@@ -297,38 +285,37 @@ fun KatalogFormContent(
                 OutlinedTextField(
                     value = date,
                     onValueChange = onDateChange,
-                    label = { Text("Tanggal Pelaksanaan") },
+                    label = { Text("Tanggal Pelaksanaan *") },
                     placeholder = { Text("Contoh: 18 Juli 2026") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                 )
 
                 OutlinedTextField(
                     value = location,
                     onValueChange = onLocationChange,
-                    label = { Text("Lokasi Tempat") },
+                    label = { Text("Lokasi Tempat *") },
                     placeholder = { Text("Contoh: Jakarta Convention Center") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                 )
 
                 OutlinedTextField(
                     value = priceInput,
                     onValueChange = onPriceChange,
-                    label = { Text("Harga (Rp)") },
+                    label = { Text("Harga (Rp) *") },
                     placeholder = { Text("Contoh: 150000") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                 )
 
-                // Image Picker Section
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -337,7 +324,7 @@ fun KatalogFormContent(
                         text = "Poster Gambar",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -350,7 +337,7 @@ fun KatalogFormContent(
                                 .clip(RoundedCornerShape(12.dp))
                         ) {
                             val imageToLoad = selectedImageUri ?: existingImageUrl
-                            
+
                             if (imageToLoad != null && imageToLoad.toString().isNotBlank()) {
                                 AsyncImage(
                                     model = imageToLoad,
@@ -359,24 +346,24 @@ fun KatalogFormContent(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
-                                // Placeholder
                                 Surface(
                                     modifier = Modifier.fillMaxSize(),
-                                    color = Color(0xFFE2DFFF),
+                                    color = ActiveFilterChipBackground,
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
                                             text = "Tidak Ada Gambar",
-                                            style = MaterialTheme.typography.labelMedium.copy(color = Color(0xFF3525CD))
+                                            style = MaterialTheme.typography.labelMedium.copy(color = PrimaryContainer)
                                         )
                                     }
                                 }
                             }
                         }
-                        
+
                         OutlinedButton(
                             onClick = onPickImageClick,
+                            enabled = !isSubmitting,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(48.dp)
                         ) {
@@ -394,27 +381,31 @@ fun KatalogFormContent(
                     maxLines = 5,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF3F51B5))
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryContainer)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
                     onClick = onSubmit,
-                    enabled = !isUploading,
+                    enabled = !isSubmitting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer)
                 ) {
                     Text(
-                        text = if (isUploading) "Menyimpan..." else "Simpan Event",
+                        text = when {
+                            isSubmitting -> "Menyimpan..."
+                            isEditMode -> "Simpan Perubahan"
+                            else -> "Simpan Event"
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -426,6 +417,7 @@ fun KatalogFormContent(
 fun KatalogFormContentPreview() {
     ManageventTheme {
         KatalogFormContent(
+            isEditMode = false,
             title = "Pameran Pernikahan Nusantara 2026",
             onTitleChange = {},
             category = "Pernikahan",
@@ -441,7 +433,7 @@ fun KatalogFormContentPreview() {
             errorMessage = null,
             existingImageUrl = null,
             selectedImageUri = null,
-            isUploading = false,
+            isSubmitting = false,
             onPickImageClick = {},
             onBackClick = {},
             onSubmit = {}

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,10 +59,9 @@ import com.managevent.app.core.theme.SurfaceContainer
 import com.managevent.app.core.theme.SurfaceContainerLow
 import com.managevent.app.core.theme.SurfaceContainerLowest
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.formatRupiah
 import com.managevent.app.features.pemesanan.data.TransaksiModel
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 
 private val orderStatuses = listOf("Berjalan", "Selesai")
 
@@ -96,6 +96,7 @@ fun RiwayatPemesananContent(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Surface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = { AppTopBar(title = "Pesanan", onBackClick = onBackClick) }
     ) { innerPadding ->
         Column(
@@ -157,12 +158,14 @@ fun RiwayatPemesananContent(
 
                 val transactions = when (riwayatState) {
                     is UiState.Success -> riwayatState.data.filter {
-                        !it.status.equals("DIBATALKAN", ignoreCase = true) &&
-                                if (page == 0) {
-                                    it.status.equals("BERJALAN", ignoreCase = true) || it.status.equals("Berjalan", ignoreCase = true)
-                                } else {
-                                    it.status.equals("SELESAI", ignoreCase = true) || it.status.equals("Selesai", ignoreCase = true)
-                                }
+                        if (page == 0) {
+                            !it.status.equals("DIBATALKAN", ignoreCase = true) &&
+                                (it.status.equals("BERJALAN", ignoreCase = true) || it.status.equals("Berjalan", ignoreCase = true))
+                        } else {
+                            it.status.equals("SELESAI", ignoreCase = true) ||
+                                it.status.equals("Selesai", ignoreCase = true) ||
+                                it.status.equals("DIBATALKAN", ignoreCase = true)
+                        }
                     }
                     else -> emptyList()
                 }
@@ -425,12 +428,6 @@ private fun TicketSyncBanner() {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = Primary,
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
@@ -439,7 +436,8 @@ private fun TransactionCard(
     transaction: TransaksiModel,
     onClick: () -> Unit
 ) {
-    val isOngoing = transaction.status.equals("Berjalan", ignoreCase = true)
+    val statusType = StatusType.fromStatus(transaction.status, transaction.statusPembayaran)
+    val isOngoing = statusType == StatusType.BERJALAN
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -473,9 +471,7 @@ private fun TransactionCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                StatusChip(
-                    status = if (isOngoing) StatusType.BERJALAN else StatusType.SELESAI
-                )
+                StatusChip(status = statusType)
             }
 
             Row(
@@ -589,13 +585,6 @@ private fun TransactionCard(
             }
         }
     }
-}
-
-private fun formatRupiah(amount: Double): String {
-    val numberFormat = NumberFormat.getNumberInstance(Locale.forLanguageTag("id-ID")).apply {
-        maximumFractionDigits = 0
-    }
-    return "Rp ${numberFormat.format(amount)}"
 }
 
 @Composable

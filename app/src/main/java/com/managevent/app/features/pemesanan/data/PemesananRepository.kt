@@ -2,7 +2,9 @@ package com.managevent.app.features.pemesanan.data
 
 import com.managevent.app.core.network.SupabaseClientProvider
 import com.managevent.app.core.util.UiState
+import com.managevent.app.core.util.parseIsoInstant
 import com.managevent.app.core.util.toUserFriendlyMessage
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -16,8 +18,10 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.random.Random
 
-class PemesananRepository {
-    private val client = SupabaseClientProvider.client
+open class PemesananRepository(
+    private val clientProvider: () -> SupabaseClient = { SupabaseClientProvider.client }
+) {
+    private val client: SupabaseClient by lazy(clientProvider)
 
     @Serializable
     private data class EventSummaryDto(
@@ -45,13 +49,10 @@ class PemesananRepository {
         val events: EventSummaryDto? = null
     ) {
         fun toModel(): TransaksiModel {
-            // Cek otomatis apakah sudah melewati batas waktu 24 jam dan masih PENDING
-            val isExpired = try {
-                if (statusPembayaran.equals("PENDING", ignoreCase = true) && !paymentExpiresAt.isNullOrBlank()) {
-                    val exp = Instant.parse(paymentExpiresAt)
-                    Instant.now().isAfter(exp)
-                } else false
-            } catch (_: Exception) { false }
+            val exp = parseIsoInstant(paymentExpiresAt)
+            val isExpired = statusPembayaran.equals("PENDING", ignoreCase = true) &&
+                exp != null &&
+                Instant.now().isAfter(exp)
 
             val effectiveStatusPembayaran = if (isExpired) "KEDALUWARSA" else statusPembayaran
 
@@ -102,17 +103,17 @@ class PemesananRepository {
             "mandiri", "mandiri_va" -> "89022"
             else -> "88000"
         }
-        val randomDigits = (100000000..999999999).random(Random(System.currentTimeMillis()))
+        val randomDigits = Random.nextInt(100000000, 1000000000)
         return "$prefix$randomDigits"
     }
 
     private fun generateRefCode(): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        val randomStr = (1..8).map { chars.random() }.joinToString("")
+        val randomStr = (1..8).map { chars[Random.nextInt(chars.length)] }.joinToString("")
         return "REF-$randomStr"
     }
 
-    suspend fun checkout(transaksi: TransaksiModel): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
+    open suspend fun checkout(transaksi: TransaksiModel): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
@@ -150,7 +151,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun processPayment(transaksiId: String, bankCode: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
+    open suspend fun processPayment(transaksiId: String, bankCode: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
@@ -177,7 +178,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun renewPaymentInstruction(transaksiId: String, bankCode: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
+    open suspend fun renewPaymentInstruction(transaksiId: String, bankCode: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
@@ -209,7 +210,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun getRiwayatPemesanan(): UiState<List<TransaksiModel>> = withContext(Dispatchers.IO) {
+    open suspend fun getRiwayatPemesanan(): UiState<List<TransaksiModel>> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Success(emptyList())
 
@@ -229,7 +230,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun getPemesananById(transaksiId: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
+    open suspend fun getPemesananById(transaksiId: String): UiState<TransaksiModel> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
@@ -251,7 +252,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun updateStatusPemesanan(transaksiId: String, status: String): UiState<String> = withContext(Dispatchers.IO) {
+    open suspend fun updateStatusPemesanan(transaksiId: String, status: String): UiState<String> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
@@ -272,15 +273,13 @@ class PemesananRepository {
         }
     }
 
-    suspend fun batalkanPemesanan(transaksiId: String): UiState<String> = withContext(Dispatchers.IO) {
+    open suspend fun batalkanPemesanan(transaksiId: String): UiState<String> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
         try {
-            client.postgrest["transaksi"].update({
-                set("status", "DIBATALKAN")
-                set("status_pembayaran", "DIBATALKAN")
-            }) {
+            // Unpaid orders cancelled before payment are deleted from active history
+            client.postgrest["transaksi"].delete {
                 filter {
                     eq("id", transaksiId)
                     eq("user_id", userId)
@@ -294,7 +293,7 @@ class PemesananRepository {
         }
     }
 
-    suspend fun batalkanPemesananWithReason(transaksiId: String, reason: String): UiState<String> = withContext(Dispatchers.IO) {
+    open suspend fun batalkanPemesananWithReason(transaksiId: String, reason: String): UiState<String> = withContext(Dispatchers.IO) {
         val userId = currentUserId()
             ?: return@withContext UiState.Error("Silakan masuk terlebih dahulu.")
 
